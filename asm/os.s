@@ -1,7 +1,7 @@
         exit  = $00
         wrch  = $01
         rdch  = $02
-        rdln  = $03
+        ;rdln  = $03
         hcli  = $04
         hbyte = $05
         file  = $06
@@ -144,10 +144,10 @@ dordch:
         rts
 
 doword:
-        cmp     #0
-        bne     notreadline
-        jmp     readline
-notreadline:
+;        cmp     #0
+;        bne     notreadline
+;        jmp     readline
+;notreadline:
 
         cmp     #8
         bne     notenvelope
@@ -174,10 +174,10 @@ envelope:
         clc
         rts
 
-readline:
-        host    rdln
-        clc
-        rts
+;readline:
+;        host    rdln
+;        clc
+;        rts
 dobyte:
         cmp     #$02
         bne     notselistrm

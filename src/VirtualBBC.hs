@@ -163,6 +163,23 @@ osword = do
     y <- getY
 
     case a of
+        -- Read line.
+        0x00 -> do
+            lo <- getX
+            hi <- getY
+            let addr = make16 lo hi
+            sAddrLo <- readMemory addr
+            sAddrHi <- readMemory (addr+1)
+            let sAddr = make16 sAddrLo sAddrHi
+            --line <- liftIO $ getLine
+            Just line <- M $ lift $ getInputLine ""
+            let n = length line
+            forM_ [0..n-1] $ \i -> do
+                writeMemory (sAddr+i16 i) (BS.c2w (line!!i))
+            writeMemory (sAddr+i16 n) 13
+            putC False
+            putY $ i8 n+1
+        -- Peek memory
         0x05 -> do
             let addr = make16 x y
             peekAddr <- word32At addr
@@ -320,6 +337,8 @@ instance Emu6502 Monad6502 where
                         c <- liftIO $ getChar
                         putA (BS.c2w c)
                         putPC $ p0+2
+                        {-
+                    -- read line
                     0x03 -> do
                         lo <- getX
                         hi <- getY
@@ -336,6 +355,7 @@ instance Emu6502 Monad6502 where
                         putC False
                         putY $ i8 n+1
                         putPC $ p0+2
+                        -}
                     -- CLI
                     0x04 -> do
                         lo <- getX
