@@ -22,4 +22,16 @@ You'll need to have a BBC Basic ROM stored in roms/BASIC.
 
 ![Bine screenshot](docs/beeb.png?raw=true "Bine Screenshot")
 
-Also, I like Bine by Autechre: https://www.youtube.com/watch?v=6ZRkOhu3KLY
+Goals
+-----
+I have a number of goals. One is to resurrect the first compiler I ever worked with. It's [here](http://www.bighole.nl/pub/mirror/homepage.ntlworld.com/kryten_droid/Acorn/Atom/pp/pp_spl_compiler.htm). Another goal is to have a look at some of the alternative languages that you could get for the Beeb.
+Comal already runs. I think Lisp does. Having some issues with OS errors in the various Forths available.
+
+I don't intend to do graphics, sound or anything like that.
+
+You can, of course, compile and run 6502 code from BBC Basic.
+
+Also
+----
+
+I like Bine by Autechre: https://www.youtube.com/watch?v=6ZRkOhu3KLY
