@@ -156,6 +156,21 @@ osfile = do
 
         _ -> error $ "Unknown OSFILE call " ++ show a ++ "," ++ show x ++ "," ++ show y
 
+osword :: Monad6502 ()
+osword = do
+    a <- getA
+    x <- getX
+    y <- getY
+
+    case a of
+        0x05 -> do
+            let addr = make16 x y
+            peekAddr <- word32At addr
+            byte <- readMemory (i16 peekAddr)
+            putA byte
+
+        _ -> liftIO $ putStrLn $ "Unknown OSWORD call: " ++ show a ++ "," ++ show x ++ "," ++ show y
+
 osfind :: Monad6502 ()
 osfind = do
     a <- getA
@@ -426,6 +441,10 @@ instance Emu6502 Monad6502 where
                     -- OSFIND
                     0x0b -> do
                         osfind
+                        putPC $ p0+2
+
+                    0x0c -> do
+                        osword
                         putPC $ p0+2
 
                     otherwise -> do

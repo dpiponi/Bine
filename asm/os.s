@@ -10,6 +10,7 @@
         bput  = $09
         gbpb  = $0a
         find  = $0b
+        word  = $0c
 
 .macro  host arg
         .byte   $02, arg
@@ -153,16 +154,21 @@ notreadline:
         jmp     envelope
 
 notenvelope:
-        ; Failure
-        sta     $82
-        ldx     #<errword
-        ldy     #>errword
-        jsr     wrstr
-        lda     $82
-        jsr     wrdec
-        jsr     osnewl
-        host    exit
-errword:    .asciiz "Bad OSWORD call:"
+
+        host    word
+        clc
+        rts
+
+;        ; Failure
+;        sta     $82
+;        ldx     #<errword
+;        ldy     #>errword
+;        jsr     wrstr
+;        lda     $82
+;        jsr     wrdec
+;        jsr     osnewl
+;        host    exit
+;errword:    .asciiz "Bad OSWORD call:"
 
 envelope:
         clc
