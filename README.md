@@ -24,8 +24,7 @@ You'll need to have a BBC Basic ROM stored in roms/BASIC.
 
 Goals
 -----
-I have a number of goals. One is to resurrect the first compiler I ever worked with. It's [here](http://www.bighole.nl/pub/mirror/homepage.ntlworld.com/kryten_droid/Acorn/Atom/pp/pp_spl_compiler.htm). Another goal is to have a look at some of the alternative languages that you could get for the Beeb.
-Comal already runs. I think Lisp does. Having some issues with OS errors in the various Forths available.
+I have a number of goals. One is to resurrect the first compiler I ever worked with. It's [here](http://www.bighole.nl/pub/mirror/homepage.ntlworld.com/kryten_droid/Acorn/Atom/pp/pp_spl_compiler.htm). Another goal is to have a look at some of the alternative languages that you could get for the Beeb.  Comal already runs. I think Lisp does. Having some issues with OS errors in the various Forths available. And one major goal is to get BCPL, a predecessor of C, up and running.
 
 I don't intend to do graphics, sound or anything like that.
 
