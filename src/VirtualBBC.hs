@@ -179,12 +179,18 @@ osword = do
             writeMemory (sAddr+i16 n) 13
             putC False
             putY $ i8 n+1
+
         -- Peek memory
         0x05 -> do
             let addr = make16 x y
             peekAddr <- word32At addr
             byte <- readMemory (i16 peekAddr)
+            putC False
             putA byte
+
+        -- Envelope
+        0x08 -> do
+            putC False
 
         _ -> liftIO $ putStrLn $ "Unknown OSWORD call: " ++ show a ++ "," ++ show x ++ "," ++ show y
 
@@ -380,6 +386,14 @@ instance Emu6502 Monad6502 where
                         x <- getX
                         y <- getY
                         case a of
+                            -- Clear ESCAPE condition
+                            124 -> do
+                                liftIO $ putStrLn "Clear ESCAPE condition"
+                            126 -> do
+                                liftIO $ putStrLn "Acknowledge ESCAPE condition"
+                                esc <- readMemory 0xff
+                                writeMemory 0xff 0x00
+                                putX esc
                             -- Read machine high order address
                             130 -> do
                                 putX 0xff
@@ -399,6 +413,12 @@ instance Emu6502 Monad6502 where
                                 putC False
                             -- Read/write length of soft key string.
                             216 -> do
+                                putX 0
+                                putY 0
+                                putC False
+                            -- Read/write status of ESCAPE key (escape action or ASCII code)
+                            229 -> do
+                                liftIO $ putStrLn "Read/write status of ESCAPE key"
                                 putX 0
                                 putY 0
                                 putC False

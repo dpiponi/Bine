@@ -40,6 +40,7 @@ executable emu6502-exe
   build-depends:       base
                      , sdl2
                      , bytestring
+                     , unix
                      , vector
                      , array
                      , containers

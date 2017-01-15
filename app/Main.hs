@@ -8,6 +8,7 @@ import GHC.Exts
 import Data.Array.IO
 import Data.Word
 import Control.Monad.State
+import Control.Concurrent.MVar
 import Control.Lens hiding (noneOf)
 import Data.Bits
 import Data.Bits.Lens
@@ -25,6 +26,7 @@ import Core
 import Binary
 import Intel hiding (hexWord16, fromHex)
 import VirtualBBC
+import System.Posix.Signals
 --import Vanilla
 --import Atari
 
@@ -70,8 +72,10 @@ loadFile :: IOUArray Int Word8 -> FileSpec -> IO ()
 loadFile arr (Intel f) = readIntel arr f
 loadFile arr (Binary f o) = readBinary arr f o
 
---step' :: Monad6502 ()
---step' = step
+handler interrupted = do
+    print "SIGINT"
+    putMVar interrupted 1
+
 main :: IO ()
 main = do
     hSetBuffering stdin NoBuffering
@@ -91,7 +95,20 @@ main = do
     let state = S { _mem = arr,  _clock = 0, _regs = R entryPoint 0 0 0 0 0xff,
                     _debug = verbose args, _handles = M.empty}
     
+    interrupted <- newEmptyMVar :: IO (MVar Int)
+    installHandler sigINT (Catch $ handler interrupted) Nothing
+
     putStrLn $ "Executing from 0x" ++ showHex entryPoint ""
     --flip execStateT state $ unM $ forever (inline step)
-    runInputT defaultSettings $ flip execStateT state $ unM $ forever (inline step)
+    runInputT defaultSettings $ flip execStateT state $ unM $
+        forever $ do
+            i <- liftIO $ isEmptyMVar interrupted
+            when (not i) $ do
+                writeMemory 0xff 0x80
+                liftIO $ putStrLn "ESCAPE!!!!!!!!!!!!!!!!!!!!!"
+                _ <- liftIO $ takeMVar interrupted
+                return ()
+            --liftIO $ print "X"
+            step
+
     return ()

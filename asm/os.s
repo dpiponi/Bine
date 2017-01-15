@@ -144,40 +144,10 @@ dordch:
         rts
 
 doword:
-;        cmp     #0
-;        bne     notreadline
-;        jmp     readline
-;notreadline:
-
-        cmp     #8
-        bne     notenvelope
-        jmp     envelope
-
-notenvelope:
-
         host    word
         clc
         rts
 
-;        ; Failure
-;        sta     $82
-;        ldx     #<errword
-;        ldy     #>errword
-;        jsr     wrstr
-;        lda     $82
-;        jsr     wrdec
-;        jsr     osnewl
-;        host    exit
-;errword:    .asciiz "Bad OSWORD call:"
-
-envelope:
-        clc
-        rts
-
-;readline:
-;        host    rdln
-;        clc
-;        rts
 dobyte:
         cmp     #$02
         bne     notselistrm
@@ -191,30 +161,14 @@ notselostrm:
         bne     notkbdled
         jmp     kbdled
 notkbdled:
-        cmp     #$7e
-        bne     notack
-        jmp     ack
-notack:
-        cmp     #$7c
-        bne     notclresc
-        jmp     clresc
-notclresc:
+;        cmp     #$7e
+;        bne     notack
+;        jmp     ack
+;notack:
         cmp     #$80
         bne     notadval
         jmp     adval
 notadval:
-;        cmp     #$82
-;        bne     notrdhi
-;        jmp     rdhi
-;notrdhi:
-;        cmp     #$83
-;        bne     notoshwm
-;        jmp     oshwm
-;notoshwm:
-;        cmp     #$84
-;        bne     nothimem
-;        jmp     himem
-;nothimem:
         cmp     #$8b
         bne     notopt
         jmp     opt
@@ -255,10 +209,6 @@ notbellfreq:
         bne     notbelldur
         jmp     belldur
 notbelldur:
-        cmp     #229
-        bne     notescstatus
-        jmp     escstatus
-notescstatus:        
         cmp     #253
         bne     notrdbreak
         jmp     rdbreak
@@ -294,14 +244,6 @@ errbyte:    .asciiz "Bad OSBYTE call:"
 
 rdbreak:
         ldx     #1
-        ldy     #0
-        clc
-        rts
-
-        ; Read/write status of Escpe key
-
-escstatus:
-        ldx     #0
         ldy     #0
         clc
         rts
@@ -430,10 +372,6 @@ selistrm:
         lda     #$00
         tax
         pla
-        clc
-        rts
-
-clresc:
         clc
         rts
 
