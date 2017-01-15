@@ -224,6 +224,57 @@ osfind = do
 
         _ -> liftIO $ putStrLn $ "Unknown OSFIND call: " ++ show a ++ "," ++ show x ++ "," ++ show y
 
+osbyte :: Word8 -> Word8 -> Word8 -> Monad6502 ()
+osbyte a x y = case a of
+        -- Clear ESCAPE condition
+        124 -> do
+            liftIO $ putStrLn "Clear ESCAPE condition"
+        126 -> do
+            liftIO $ putStrLn "Acknowledge ESCAPE condition"
+            esc <- readMemory 0xff
+            writeMemory 0xff 0x00
+            putX esc
+        -- Read machine high order address
+        130 -> do
+            putX 0xff
+            putY 0xff
+        -- Read top of operating system RAM address (OSHWM)
+        131 -> do
+            putX 0x00
+            putY 0x0e
+        -- Read bottom of display RAM address (HIMEM)
+        132 -> do
+            putX 0x00
+            putY 0x80
+        -- Read/write *EXEC file handle.
+        198 -> do
+            putX 0
+            putY 0
+            putC False
+        -- Read/write length of soft key string.
+        216 -> do
+            putX 0
+            putY 0
+            putC False
+        -- Read/write status of ESCAPE key (escape action or ASCII code)
+        229 -> do
+            liftIO $ putStrLn "Read/write status of ESCAPE key"
+            putX 0
+            putY 0
+            putC False
+        _ -> do
+            if a >= 0xa6 && a <= 0xff
+                then do
+                    let addr = i16 a-0xa6+0x236
+                    old <- readMemory addr
+                    next <- readMemory (addr+1)
+                    let new = (old .&. x) `xor` y
+                    writeMemory addr new
+                    putX old
+                    putY next
+
+                else error $ "Unknown OSBYTE call " ++ show a ++ "," ++ show x ++ "," ++ show y
+
 instance Emu6502 Monad6502 where
     {-# INLINE readMemory #-}
     readMemory addr = do
@@ -385,55 +436,7 @@ instance Emu6502 Monad6502 where
                         a <- getA
                         x <- getX
                         y <- getY
-                        case a of
-                            -- Clear ESCAPE condition
-                            124 -> do
-                                liftIO $ putStrLn "Clear ESCAPE condition"
-                            126 -> do
-                                liftIO $ putStrLn "Acknowledge ESCAPE condition"
-                                esc <- readMemory 0xff
-                                writeMemory 0xff 0x00
-                                putX esc
-                            -- Read machine high order address
-                            130 -> do
-                                putX 0xff
-                                putY 0xff
-                            -- Read top of operating system RAM address (OSHWM)
-                            131 -> do
-                                putX 0x00
-                                putY 0x0e
-                            -- Read bottom of display RAM address (HIMEM)
-                            132 -> do
-                                putX 0x00
-                                putY 0x80
-                            -- Read/write *EXEC file handle.
-                            198 -> do
-                                putX 0
-                                putY 0
-                                putC False
-                            -- Read/write length of soft key string.
-                            216 -> do
-                                putX 0
-                                putY 0
-                                putC False
-                            -- Read/write status of ESCAPE key (escape action or ASCII code)
-                            229 -> do
-                                liftIO $ putStrLn "Read/write status of ESCAPE key"
-                                putX 0
-                                putY 0
-                                putC False
-                            _ -> do
-                                if a >= 0xa6 && a <= 0xff
-                                    then do
-                                        let addr = i16 a-0xa6+0x236
-                                        old <- readMemory addr
-                                        next <- readMemory (addr+1)
-                                        let new = (old .&. x) `xor` y
-                                        writeMemory addr new
-                                        putX old
-                                        putY next
-
-                                    else error $ "Unknown OSBYTE call " ++ show a ++ "," ++ show x ++ "," ++ show y
+                        osbyte a x y
                         putPC $ p0+2
                     0x06 -> do
                         osfile

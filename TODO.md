@@ -10,10 +10,11 @@
 10. Handle SIGINT during OSWORD 0.
 11. Some * commands for OSCLI.
 12. Clock support.
-13. Make OSBYTE &A6 to &FF write &236 to &28F or similar
-    (p.110 AUG)
 14. *LOAD should handle missing file gracefully. Same for other I/O.
 15. INKEY?
 
 Done
 ----
+13. Make OSBYTE &A6 to &FF write &236 to &28F or similar
+    (p.110 AUG)
+        Still needs to provide actual functionality in relevant cases.
