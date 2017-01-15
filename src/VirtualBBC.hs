@@ -423,7 +423,17 @@ instance Emu6502 Monad6502 where
                                 putY 0
                                 putC False
                             _ -> do
-                                error $ "Unknown OSBYTE call " ++ show a ++ "," ++ show x ++ "," ++ show y
+                                if a >= 0xa6 && a <= 0xff
+                                    then do
+                                        let addr = i16 a-0xa6+0x236
+                                        old <- readMemory addr
+                                        next <- readMemory (addr+1)
+                                        let new = (old .&. x) `xor` y
+                                        writeMemory addr new
+                                        putX old
+                                        putY next
+
+                                    else error $ "Unknown OSBYTE call " ++ show a ++ "," ++ show x ++ "," ++ show y
                         putPC $ p0+2
                     0x06 -> do
                         osfile
