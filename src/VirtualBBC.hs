@@ -9,6 +9,7 @@ import Control.Monad.State
 import Control.Lens
 import System.IO.Error
 import Data.Bits.Lens
+import Utils
 import Data.Foldable
 import System.Exit
 import Data.Bits
@@ -22,35 +23,10 @@ import qualified Data.IntMap as M
 import Core
 import Monad6502
 
-data State6502 = S {
-    _mem :: IOUArray Int Word8,
-    _clock :: !Int,
-    _regs :: !Registers,
-    _debug :: !Bool,
-
-    _handles :: M.IntMap Handle
-}
-
-makeLenses ''State6502
-
-removeStars :: String -> String
-removeStars ('*' : cs) = removeStars cs
-removeStars cs = cs
-
 freeHandle :: M.IntMap Handle -> Int
 freeHandle hs =
     let freeHandle' i = if i `M.notMember` hs then i else freeHandle' (i+1)
     in freeHandle' 1
-
-newtype Monad6502 a = M { unM :: StateT State6502 (InputT IO) a }
-    deriving (Functor, Applicative, Monad, MonadState State6502, MonadIO)
-
-i32 :: Integral a => a -> Word32
-i32 = fromIntegral
-
-{-# INLINE make32 #-}
-make32 :: Word8 -> Word8 -> Word8 -> Word8 -> Word32
-make32 b0 b1 b2 b3 = (i32 b3 `shift` 24)+(i32 b2 `shift` 32)+(i32 b1 `shift` 8)+i32 b0
 
 stringAt :: Word16 -> Monad6502 String
 stringAt addr = do
