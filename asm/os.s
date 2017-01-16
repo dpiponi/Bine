@@ -161,10 +161,6 @@ notselostrm:
         bne     notkbdled
         jmp     kbdled
 notkbdled:
-;        cmp     #$7e
-;        bne     notack
-;        jmp     ack
-;notack:
         cmp     #$80
         bne     notadval
         jmp     adval

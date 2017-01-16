@@ -9,6 +9,7 @@ import Control.Monad.State
 import Control.Lens
 import System.IO.Error
 import Data.Bits.Lens
+import Data.Foldable
 import System.Exit
 import Data.Bits
 import System.Process
@@ -200,9 +201,11 @@ osfind = do
     x <- getX
     y <- getY
     case a of
+        -- Close all files
         0x00 -> do
-            when (y == 0) $ error "Close all files unimplemented"
             hs <- use handles
+            when (y == 0) $ forM_ hs $ liftIO . hClose
+            handles .= M.empty
             let k = fromIntegral y
             let mh = M.lookup k hs
             case mh of
@@ -244,6 +247,10 @@ osbyte a x y = case a of
             putY 0x0e
         -- Read bottom of display RAM address (HIMEM)
         132 -> do
+            putX 0x00
+            putY 0x80
+        -- Read bottom of display RAM for a specified mode
+        133 -> do
             putX 0x00
             putY 0x80
         -- Read/write *EXEC file handle.
@@ -445,7 +452,14 @@ instance Emu6502 Monad6502 where
                         a <- getA
                         x <- getX
                         y <- getY
-                        error $ "Unknown OSARGS call " ++ show a ++ "," ++ show x ++ "," ++ show y
+                        case (y, 0) of
+
+                            --Return current filing system
+                            (0, 0) -> do
+                                putA 99
+                                putD False
+
+                            _ -> error $ "Unknown OSARGS call " ++ show a ++ "," ++ show x ++ "," ++ show y
                     -- OSBGET
                     0x08 -> do
                         a <- getA
