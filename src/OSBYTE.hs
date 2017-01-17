@@ -20,6 +20,9 @@ import Data.Bits
 {-# INLINABLE osbyte #-}
 osbyte :: (MonadState State6502 m, Emu6502 m) => Word8 -> Word8 -> Word8 -> m ()
 osbyte a x y = case a of
+        -- Enable/disable cursor editing
+        4 -> do
+            liftIO $ putStrLn $ "Cursor editing:" ++ show a ++ " " ++ show x ++ " " ++ show y
         -- Clear ESCAPE condition
         124 -> do
             liftIO $ putStrLn "Clear ESCAPE condition"
