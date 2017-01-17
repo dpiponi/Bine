@@ -20,80 +20,11 @@ import System.IO
 import System.Console.Haskeline
 import qualified Data.IntMap as M
 
+import OSFIND
+import OSFILE
 import Core
+import State6502
 import Monad6502
-
-freeHandle :: M.IntMap Handle -> Int
-freeHandle hs =
-    let freeHandle' i = if i `M.notMember` hs then i else freeHandle' (i+1)
-    in freeHandle' 1
-
-stringAt :: Word16 -> Monad6502 String
-stringAt addr = do
-    let loop cmd i = do
-                    byte <- readMemory (addr+i16 i)
-                    if byte /= 0x0d
-                        then loop (cmd ++ [BS.w2c byte]) (i+1)
-                        else return cmd
-    loop "" 0
-
-word16At :: Word16 -> Monad6502 Word16
-word16At addr = do
-    lo <- readMemory addr
-    hi <- readMemory (addr+1)
-    return $ make16 lo hi
-
-word32At :: Word16 -> Monad6502 Word32
-word32At addr = do
-    b0 <- readMemory addr
-    b1 <- readMemory (addr+1)
-    b2 <- readMemory (addr+2)
-    b3 <- readMemory (addr+3)
-    return $ make32 b0 b1 b2 b3
-
-putWord32 :: Word16 -> Word32 -> Monad6502 ()
-putWord32 addr w = do
-    writeMemory addr (i8 $ w)
-    writeMemory (addr+1) (i8 (w `shift` (-8)))
-    writeMemory (addr+2) (i8 (w `shift` (-16)))
-    writeMemory (addr+3) (i8 (w `shift` (-24)))
-
-osfile :: Monad6502 ()
-osfile = do
-    a <- getA
-    x <- getX
-    y <- getY
-
-    let blockAddr = make16 x y
-    stringAddr <- word16At blockAddr
-    filename <- stringAt stringAddr
-    
-    case a of
-        -- Save block
-        0 -> do
-            startData32 <- word32At (blockAddr+0xa)
-            endData32 <- word32At (blockAddr+0xe)
-            let start = i16 startData32
-            let end = i16 endData32
-            liftIO $ putStrLn $ "Saving " ++ showHex start "" ++ ":" ++ showHex end "" ++ " to " ++ filename
-            h <- liftIO $ openFile filename WriteMode
-            forM_ [start..end-1] $ \i -> do
-                x <- readMemory i
-                liftIO $ hPutChar h (BS.w2c x)
-            liftIO $ hClose h
-
-        0xff -> do
-            loadAddr32 <- word32At (blockAddr+0x2)
-            let start = i16 loadAddr32
-            h <- liftIO $ openFile filename ReadMode
-            bytes <- liftIO $ hGetContents h
-            let len = length bytes
-            let end = start+fromIntegral len
-            liftIO $ putStrLn $ "Reading " ++ showHex start "" ++ ":" ++ showHex end "" ++ " from " ++ filename
-            forM_ (zip [start..end-1] bytes) $ \(i, d) -> writeMemory i (BS.c2w d)
-            liftIO $ hClose h
-
-        _ -> error $ "Unknown OSFILE call " ++ show a ++ "," ++ show x ++ "," ++ show y
 
 osword :: Monad6502 ()
 osword = do
@@ -132,38 +63,6 @@ osword = do
             putC False
 
         _ -> liftIO $ putStrLn $ "Unknown OSWORD call: " ++ show a ++ "," ++ show x ++ "," ++ show y
-
-osfind :: Monad6502 ()
-osfind = do
-    a <- getA
-    x <- getX
-    y <- getY
-    case a of
-        -- Close all files
-        0x00 -> do
-            hs <- use handles
-            when (y == 0) $ forM_ hs $ liftIO . hClose
-            handles .= M.empty
-            let k = fromIntegral y
-            let mh = M.lookup k hs
-            case mh of
-                Nothing -> error $ "Unknown handle #" ++ show k
-                Just h -> do
-                    liftIO $ putStrLn $ "Closing #" ++ show k
-                    liftIO $ hClose h
-                    handles %= M.delete k
-
-        0x80 -> do
-            let addr = make16 x y
-            filename <- stringAt addr
-            h <- liftIO $ openFile filename WriteMode
-            hs <- use handles
-            let k = freeHandle hs
-            handles %= M.insert k h
-            liftIO $ putStrLn $ "Opened " ++ filename ++ " with handle " ++ show k
-            putA (i8 k)
-
-        _ -> liftIO $ putStrLn $ "Unknown OSFIND call: " ++ show a ++ "," ++ show x ++ "," ++ show y
 
 osbyte :: Word8 -> Word8 -> Word8 -> Monad6502 ()
 osbyte a x y = case a of
@@ -443,6 +342,7 @@ instance Emu6502 Monad6502 where
                         x <- getX
                         y <- getY
                         error $ "Unknown OSGBPB call " ++ show a ++ "," ++ show x ++ "," ++ show y
+
                     -- OSFIND
                     0x0b -> do
                         osfind

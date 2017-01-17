@@ -8,6 +8,7 @@ import GHC.Exts
 import Data.Array.IO
 import Data.Word
 import Monad6502
+import State6502
 import Control.Monad.State
 import Control.Concurrent.MVar
 import Control.Lens hiding (noneOf)
