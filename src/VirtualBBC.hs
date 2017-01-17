@@ -13,7 +13,6 @@ import Utils
 import Data.Foldable
 import System.Exit
 import Data.Bits
-import System.Process
 import Data.Word
 import Numeric
 import System.IO
@@ -24,6 +23,7 @@ import OSFIND
 import OSFILE
 import OSWORD
 import OSBYTE
+import OSCLI
 import Core
 import State6502
 import Monad6502
@@ -168,21 +168,7 @@ instance Emu6502 Monad6502 where
                         -}
                     -- CLI
                     0x04 -> do
-                        lo <- getX
-                        hi <- getY
-                        let addr = make16 lo hi
-                        {-
-                        let loop cmd i = do
-                                        byte <- readMemory (addr+i16 i)
-                                        if byte /= 0x0d
-                                            then loop (cmd ++ [BS.w2c byte]) (i+1)
-                                            else return cmd
-                        cmd <- loop "" 0
-                        -}
-                        cmd <- stringAt addr
-                        let cmd' = removeStars cmd
-                        liftIO $ putStrLn cmd'
-                        liftIO $ system cmd'
+                        oscli
                         putPC $ p0+2
                     -- HBYTE
                     0x05 -> do
