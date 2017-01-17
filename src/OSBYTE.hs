@@ -47,6 +47,12 @@ osbyte a x y = case a of
         133 -> do
             putX 0x00
             putY 0x80
+        -- Read character at text cursor position.
+        -- Docs say to use 0 if character not recognised.
+        -- Lying about mode 7.
+        135 -> do
+            putX 0
+            putY 7
         -- Read/write *EXEC file handle.
         198 -> do
             putX 0
