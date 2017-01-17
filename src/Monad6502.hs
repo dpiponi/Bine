@@ -6,6 +6,7 @@ module Monad6502 where
 import Data.Word
 import Control.Lens
 import Control.Monad.State
+import MonadInput
 import Data.Bits.Lens
 import System.Console.Haskeline
 import Data.Array.IO
@@ -19,6 +20,9 @@ import qualified Data.ByteString.Internal as BS (c2w, w2c)
 
 newtype Monad6502 a = M { unM :: StateT State6502 (InputT IO) a }
     deriving (Functor, Applicative, Monad, MonadState State6502, MonadIO)
+
+instance MonadInput Monad6502 where
+    inputLine = M . lift . getInputLine
 
 {-# INLINABLE stringAt #-}
 stringAt :: Emu6502 m => Word16 -> m String

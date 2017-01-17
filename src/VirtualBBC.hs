@@ -22,47 +22,10 @@ import qualified Data.IntMap as M
 
 import OSFIND
 import OSFILE
+import OSWORD
 import Core
 import State6502
 import Monad6502
-
-osword :: Monad6502 ()
-osword = do
-    a <- getA
-    x <- getX
-    y <- getY
-
-    case a of
-        -- Read line.
-        0x00 -> do
-            lo <- getX
-            hi <- getY
-            let addr = make16 lo hi
-            sAddrLo <- readMemory addr
-            sAddrHi <- readMemory (addr+1)
-            let sAddr = make16 sAddrLo sAddrHi
-            --line <- liftIO $ getLine
-            Just line <- M $ lift $ getInputLine ""
-            let n = length line
-            forM_ [0..n-1] $ \i -> do
-                writeMemory (sAddr+i16 i) (BS.c2w (line!!i))
-            writeMemory (sAddr+i16 n) 13
-            putC False
-            putY $ i8 n+1
-
-        -- Peek memory
-        0x05 -> do
-            let addr = make16 x y
-            peekAddr <- word32At addr
-            byte <- readMemory (i16 peekAddr)
-            putC False
-            putA byte
-
-        -- Envelope
-        0x08 -> do
-            putC False
-
-        _ -> liftIO $ putStrLn $ "Unknown OSWORD call: " ++ show a ++ "," ++ show x ++ "," ++ show y
 
 osbyte :: Word8 -> Word8 -> Word8 -> Monad6502 ()
 osbyte a x y = case a of
