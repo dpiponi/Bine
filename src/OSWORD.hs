@@ -22,6 +22,7 @@ osword = do
     a <- getA
     x <- getX
     y <- getY
+    --liftIO $ putStrLn $ "OSWORD " ++ show (a, x, y)
 
     case a of
         -- Read line.

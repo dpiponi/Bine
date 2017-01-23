@@ -144,6 +144,7 @@ instance Emu6502 Monad6502 where
                         liftIO $ putChar (BS.w2c c)
                         putPC $ p0+2
                     0x02 -> do
+                        --liftIO $ putStrLn "OSRDCH"
                         c <- liftIO $ getChar
                         putA (BS.c2w c)
                         putPC $ p0+2

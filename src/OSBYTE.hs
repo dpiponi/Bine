@@ -19,7 +19,9 @@ import Data.Bits
 
 {-# INLINABLE osbyte #-}
 osbyte :: (MonadState State6502 m, Emu6502 m) => Word8 -> Word8 -> Word8 -> m ()
-osbyte a x y = case a of
+osbyte a x y = do
+    --liftIO $ putStrLn $ "OSBYTE " ++ show (a, x, y)
+    case a of
         -- Enable/disable cursor editing
         4 -> do
             liftIO $ putStrLn $ "Cursor editing:" ++ show a ++ " " ++ show x ++ " " ++ show y
