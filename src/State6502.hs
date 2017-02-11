@@ -4,6 +4,7 @@
 module State6502 where
 
 import Data.Word
+import Data.Time.Clock
 import Control.Lens
 import Control.Monad.State
 import Data.Bits.Lens
@@ -57,6 +58,7 @@ data State6502 = S {
     _regs :: !Registers,
     _debug :: !Bool,
 
+    _sysclock :: !UTCTime,
     _handles :: M.IntMap Handle
 }
 

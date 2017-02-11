@@ -7,6 +7,7 @@
 import GHC.Exts
 import Data.Array.IO
 import Data.Word
+import Data.Time.Clock
 import Monad6502
 import State6502
 import Control.Monad.State
@@ -94,8 +95,9 @@ main = do
         loadFile arr spec
         
     let [(entryPoint, _)] = readHex (entry args)
+    systime <- getCurrentTime
     let state = S { _mem = arr,  _clock = 0, _regs = R entryPoint 0 0 0 0 0xff,
-                    _debug = verbose args, _handles = M.empty}
+                    _debug = verbose args, _handles = M.empty, _sysclock = systime}
     
     interrupted <- newEmptyMVar :: IO (MVar Int)
     installHandler sigINT (Catch $ handler interrupted) Nothing

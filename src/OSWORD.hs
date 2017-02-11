@@ -6,6 +6,7 @@ import Control.Monad.State
 import System.IO
 import Utils
 import MonadInput
+import Data.Time.Clock
 import Control.Lens
 import State6502
 import Monad6502
@@ -42,6 +43,15 @@ osword = do
             writeMemory (sAddr+i16 n) 13
             putC False
             putY $ i8 n+1
+        
+        -- Read system clock
+        0x01 -> do
+            let addr = make16 x y
+            t0 <- use sysclock
+            t1 <- liftIO $ getCurrentTime
+            let diff = t1 `diffUTCTime` t0
+            let a = floor (100*diff)
+            putWord32 addr (fromIntegral a)
 
         -- Peek memory
         0x05 -> do
