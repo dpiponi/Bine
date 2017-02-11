@@ -31,6 +31,21 @@ osbyte a x y = case a of
             esc <- readMemory 0xff
             writeMemory 0xff 0x00
             putX esc
+        -- Read key with time limit
+        129 -> do
+            if y < 0xff
+                then do
+                    result <- liftIO $ hWaitForInput stdin (10*fromIntegral (make16 x y))
+                    if result
+                        then do
+                            k <- liftIO getChar
+                            putX (BS.c2w k)
+                            putY 0
+                            putC False
+                        else do
+                            putY 0xff
+                            putC True
+                else error $ "Unknown OSBYTE call " ++ show a ++ "," ++ show x ++ "," ++ show y
         -- Read machine high order address
         130 -> do
             putX 0xff
