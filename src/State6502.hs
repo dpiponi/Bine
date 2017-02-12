@@ -13,6 +13,7 @@ import Data.Array.IO
 import qualified Data.IntMap as M
 import System.IO
 import Data.ByteString as B
+import FileSystems
 
 data Registers = R {
     _pc :: !Word16,
@@ -52,8 +53,6 @@ flagV = p . bitAt 6
 {-# INLINE flagN #-}
 flagN :: Lens' Registers Bool
 flagN = p . bitAt 7
-
-data VHandle = HHandle Handle | BHandle Int B.ByteString
 
 data State6502 = S {
     _mem :: IOUArray Int Word8,

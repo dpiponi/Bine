@@ -19,6 +19,7 @@ import Numeric
 import System.IO
 import System.Console.Haskeline
 import qualified Data.IntMap as M
+import FileSystems
 
 import OSFIND
 import OSFILE

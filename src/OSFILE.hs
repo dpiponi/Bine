@@ -2,6 +2,7 @@
 
 module OSFILE where
 
+import FileSystems
 import Control.Monad.State
 import System.IO
 import Utils
