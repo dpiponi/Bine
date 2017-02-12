@@ -3,6 +3,7 @@
 
 module VirtualBBC where
 
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BS (c2w, w2c)
 import Data.Array.IO
 import Control.Monad.State
@@ -203,7 +204,7 @@ instance Emu6502 Monad6502 where
                         let mh = M.lookup k hs
                         case mh of
                             Nothing -> error $ "Unknown handle #" ++ show k
-                            Just h -> do
+                            Just (HHandle h) -> do
                                 ic <- liftIO $ tryIOError (hGetChar h)
                                 case ic of
                                     Left e ->
@@ -215,6 +216,15 @@ instance Emu6502 Monad6502 where
                                     Right c -> do
                                         putA (BS.c2w c)
                                         putC False
+                            Just (BHandle i bs) -> do
+                                if i < B.length bs
+                                    then do
+                                        putA (bs `B.index` i)
+                                        handles %= M.insert k (BHandle (i+1) bs)
+                                        putC False
+                                    else do
+                                        putC True
+                                        putA 0xfe
                         putPC $ p0+2
                     -- OSBPUT
                     0x09 -> do
@@ -227,11 +237,13 @@ instance Emu6502 Monad6502 where
                         let c = BS.w2c (fromIntegral a)
                         case mh of
                             Nothing -> error $ "Unknown handle #" ++ show k
-                            Just h -> do
+                            Just (HHandle h) -> do
                                 ic <- liftIO $ tryIOError (hPutChar h c)
                                 case ic of
                                     Left e -> liftIO $ putStrLn $ "Error writing to #" ++ show k
                                     Right _ -> return ()
+                            Just (BHandle _ _) -> do
+                                liftIO $ putStrLn $ "Error writing to (readonly) #" ++ show k
                         putPC $ p0+2
                     0x0a -> do
                         a <- getA

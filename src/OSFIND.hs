@@ -12,10 +12,17 @@ import Utils
 import Core
 import qualified Data.IntMap as M
 
-freeHandle :: M.IntMap Handle -> Int
+freeHandle :: M.IntMap VHandle -> Int
 freeHandle hs =
     let freeHandle' i = if i `M.notMember` hs then i else freeHandle' (i+1)
     in freeHandle' 1
+
+closeFile :: VHandle -> IO ()
+closeFile (HHandle h) = hClose h
+closeFile (BHandle _ _) = return ()
+
+closeAllFiles :: M.IntMap VHandle -> IO ()
+closeAllFiles hs = forM_ hs closeFile
 
 {-# INLINABLE osfind #-}
 osfind :: (MonadState State6502 m, Emu6502 m) => m ()
@@ -24,27 +31,32 @@ osfind = do
     x <- getX
     y <- getY
     case a of
-        -- Close all files
+        -- Causes a file or files to be closed.
         0x00 -> do
             hs <- use handles
-            when (y == 0) $ forM_ hs $ liftIO . hClose
-            handles .= M.empty
-            let k = fromIntegral y
-            let mh = M.lookup k hs
-            case mh of
-                Nothing -> error $ "Unknown handle #" ++ show k
-                Just h -> do
-                    liftIO $ putStrLn $ "Closing #" ++ show k
-                    liftIO $ hClose h
-                    handles %= M.delete k
+            if y == 0 
+                then do 
+                    liftIO (closeAllFiles hs)
+                    handles .= M.empty
+                else do
+                    let k = fromIntegral y
+                    let mh = M.lookup k hs
+                    case mh of
+                        Nothing -> error $ "Unknown handle #" ++ show k
+                        Just h -> do
+                            liftIO $ putStrLn $ "Closing #" ++ show k
+                            liftIO $ closeFile h
+                            handles %= M.delete k
 
+        -- Causes a file to be opened for output (writing).
+        -- For now defaulting to "Host" OS
         0x80 -> do
             let addr = make16 x y
             filename <- stringAt addr
             h <- liftIO $ openFile filename WriteMode
             hs <- use handles
             let k = freeHandle hs
-            handles %= M.insert k h
+            handles %= M.insert k (HHandle h)
             liftIO $ putStrLn $ "Opened " ++ filename ++ " with handle " ++ show k
             putA (i8 k)
 

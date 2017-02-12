@@ -12,6 +12,7 @@ import System.Console.Haskeline
 import Data.Array.IO
 import qualified Data.IntMap as M
 import System.IO
+import Data.ByteString as B
 
 data Registers = R {
     _pc :: !Word16,
@@ -52,6 +53,8 @@ flagV = p . bitAt 6
 flagN :: Lens' Registers Bool
 flagN = p . bitAt 7
 
+data VHandle = HHandle Handle | BHandle Int B.ByteString
+
 data State6502 = S {
     _mem :: IOUArray Int Word8,
     _clock :: !Int,
@@ -59,7 +62,7 @@ data State6502 = S {
     _debug :: !Bool,
 
     _sysclock :: !UTCTime,
-    _handles :: M.IntMap Handle
+    _handles :: M.IntMap VHandle
 }
 
 makeLenses ''State6502
