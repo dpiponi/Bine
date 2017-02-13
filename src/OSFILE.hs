@@ -77,7 +77,8 @@ osfile = do
                 let start = i16 actualAddress
                 let len = B.length bytes
                 let end = start+fromIntegral len
-                liftIO $ putStrLn $ "Reading " ++ showHex start "" ++ ":" ++ showHex end "" ++ " from " ++ filename
+                liftIO $ putStrLn $
+                        "Reading " ++ showHex start "" ++ ":" ++ showHex end "" ++ " from " ++ filename
                 forM_ (zip [start..end-1] (B.unpack bytes)) $ \(i, d) -> writeMemory i d
 
             _ -> error $ "Unknown OSFILE call " ++ show a ++ "," ++ show x ++ "," ++ show y

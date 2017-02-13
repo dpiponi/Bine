@@ -82,9 +82,10 @@ handler interrupted = do
     print "SIGINT"
     putMVar interrupted 1
 
-fs :: FileSystem
+loadfs :: IO FileSystem
 --fs = Host
-fs = Bytes 0xe00 0xe00 $ M.insert "FILE" (pack (Prelude.map BS.c2w "FRED")) M.empty
+-- fs = Bytes 0xe00 0xe00 $ M.insert "FILE" (pack (Prelude.map BS.c2w "FRED")) M.empty
+loadfs = loadImage "WELCOME.IMG"
 
 main :: IO ()
 main = do
@@ -103,6 +104,7 @@ main = do
         
     let [(entryPoint, _)] = readHex (entry args)
     systime <- getCurrentTime
+    fs <- loadfs
     let state = S { _mem = arr,  _clock = 0, _regs = R entryPoint 0 0 0 0 0xff,
                     _debug = verbose args, _handles = I.empty, _sysclock = systime,
                     _fileSystem = fs }
