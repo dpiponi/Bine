@@ -18,6 +18,7 @@ import qualified Data.ByteString.Internal as BS (c2w, w2c)
 import Data.Word
 import Numeric
 
+-- http://mdfs.net/Docs/Comp/BBC/API/OSFILE.htm
 {-# INLINABLE osfile #-}
 osfile :: (MonadState State6502 m, Emu6502 m) => m ()
 osfile = do
@@ -60,7 +61,7 @@ osfile = do
 
             _ -> error $ "Unknown OSFILE call " ++ show a ++ "," ++ show x ++ "," ++ show y
 
-        Bytes cat -> case a of
+        Bytes load exec cat -> case a of
             -- Save a section of memory as a named file.
             -- The file’s catalogue information is also written.
             0x00 -> error $ "Failed (readonly) OSFILE call " ++ show a ++ "," ++ show x ++ "," ++ show y
@@ -68,8 +69,12 @@ osfile = do
             -- Load the named file and read the named file’s catalogue information.
             0xff -> do
                 loadAddr32 <- word32At (blockAddr+0x2)
-                let start = i16 loadAddr32
+                execAddr32 <- word32At (blockAddr+0x6)
+                startData32 <- word32At (blockAddr+0xa)
+                addressType <- readMemory (blockAddr+0x6)
                 let bytes = cat M.! filename -- XXX unsafe
+                let actualAddress = if addressType == 0 then load else loadAddr32
+                let start = i16 actualAddress
                 let len = B.length bytes
                 let end = start+fromIntegral len
                 liftIO $ putStrLn $ "Reading " ++ showHex start "" ++ ":" ++ showHex end "" ++ " from " ++ filename

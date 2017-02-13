@@ -16,7 +16,8 @@ import Control.Concurrent.MVar
 import Control.Lens hiding (noneOf)
 import Data.Bits
 import Data.Bits.Lens
-import qualified Data.IntMap as M
+import qualified Data.IntMap as I
+import qualified Data.Map as M
 import Data.ByteString as B hiding (putStrLn, putStr, count, head)
 import System.IO
 import Data.Binary.Get
@@ -31,6 +32,7 @@ import Binary
 import Intel hiding (hexWord16, fromHex)
 import VirtualBBC
 import System.Posix.Signals
+import qualified Data.ByteString.Internal as BS (c2w, w2c)
 --import Vanilla
 --import Atari
 
@@ -80,6 +82,10 @@ handler interrupted = do
     print "SIGINT"
     putMVar interrupted 1
 
+fs :: FileSystem
+--fs = Host
+fs = Bytes 0xe00 0xe00 $ M.insert "FILE" (pack (Prelude.map BS.c2w "FRED")) M.empty
+
 main :: IO ()
 main = do
     hSetBuffering stdin NoBuffering
@@ -98,8 +104,8 @@ main = do
     let [(entryPoint, _)] = readHex (entry args)
     systime <- getCurrentTime
     let state = S { _mem = arr,  _clock = 0, _regs = R entryPoint 0 0 0 0 0xff,
-                    _debug = verbose args, _handles = M.empty, _sysclock = systime,
-                    _fileSystem = Host }
+                    _debug = verbose args, _handles = I.empty, _sysclock = systime,
+                    _fileSystem = fs }
     
     interrupted <- newEmptyMVar :: IO (MVar Int)
     installHandler sigINT (Catch $ handler interrupted) Nothing
