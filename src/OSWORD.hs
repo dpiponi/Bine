@@ -28,6 +28,7 @@ osword = do
     case a of
         -- Read line.
         0x00 -> do
+            --liftIO $ hSetEcho stdin False
             lo <- getX
             hi <- getY
             let addr = make16 lo hi
@@ -43,6 +44,7 @@ osword = do
             writeMemory (sAddr+i16 n) 13
             putC False
             putY $ i8 n+1
+            --liftIO $ hSetEcho stdin True
         
         -- Read system clock
         0x01 -> do

@@ -16,7 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   ghc-options:         -O5 -fwarn-missing-signatures -funbox-strict-fields -fsimpl-tick-factor=200
-  exposed-modules:     Core, Intel, Binary, VirtualBBC, OSFIND, OSFILE, OSCLI, OSWORD, OSBYTE, Monad6502, Utils, State6502, FileSystems
+  exposed-modules:     Core, Intel, Binary, VirtualBBC, OSFIND, OSFILE, OSCLI, OSWORD, OSBYTE, Monad6502, Utils, State6502, FileSystems, MetaData
   build-depends:       base >= 4.7 && < 5
                      , sdl2
                      , bytestring
@@ -34,8 +34,30 @@ library
                      , time
   default-language:    Haskell2010
 
-executable emu6502-exe
+executable bine-exe
   hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -O5 -fwarn-missing-signatures -funbox-strict-fields -fsimpl-tick-factor=200
+  build-depends:       base
+                     , sdl2
+                     , bytestring
+                     , unix
+                     , vector
+                     , array
+                     , containers
+                     , mtl
+                     , lens
+                     , binary
+                     , Bine
+                     , cmdargs
+                     , monad-loops
+                     , parsec
+                     , haskeline
+                     , time
+  default-language:    Haskell2010
+
+executable unpack-exe
+  hs-source-dirs:      unpack
   main-is:             Main.hs
   ghc-options:         -O5 -fwarn-missing-signatures -funbox-strict-fields -fsimpl-tick-factor=200
   build-depends:       base

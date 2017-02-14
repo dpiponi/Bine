@@ -9,6 +9,7 @@ import Data.Array.IO
 import Control.Monad.State
 import Control.Lens
 import System.IO.Error
+import Data.Char
 import Data.Bits.Lens
 import Utils
 import Data.Foldable
@@ -30,18 +31,13 @@ import Core
 import State6502
 import Monad6502
 
+translateKey :: Word8 -> Word8
+translateKey 10 = 13
+translateKey k = k
+
 instance Emu6502 Monad6502 where
     {-# INLINE readMemory #-}
     readMemory addr = do
-        -- debugStrLn $ "Reading from addr " ++ showHex addr ""
-        -- if addr == 0x8000
-        --     then do
-        --         c <- liftIO $ getChar
-        --         return $ BS.c2w c
-        --     else do
-        --         m <- use mem
-        --         liftIO $ readArray m addr
-
         m <- use mem
         liftIO $ readArray m (fromIntegral addr)
 
@@ -49,13 +45,6 @@ instance Emu6502 Monad6502 where
     writeMemory addr v = do
         m <- use mem
         liftIO $ writeArray m (fromIntegral addr) v
-        -- debugStrLn $ "Writing " ++ showHex v "" ++ " to addr " ++ showHex addr ""
-        -- if addr == 0x8000
-        --     then do
-        --         liftIO $ putChar (BS.w2c v)
-        --     else do
-        --         m <- use mem
-        --         liftIO $ writeArray m addr v
 
     {-# INLINE getPC #-}
     getPC = use (regs . pc)
@@ -148,7 +137,8 @@ instance Emu6502 Monad6502 where
                     0x02 -> do
                         --liftIO $ putStrLn "OSRDCH"
                         c <- liftIO $ getChar
-                        putA (BS.c2w c)
+                        --liftIO $ print $ (c, ord c)
+                        putA (translateKey $ BS.c2w c)
                         putPC $ p0+2
                         {-
                     -- read line

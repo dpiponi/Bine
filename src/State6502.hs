@@ -60,7 +60,7 @@ data State6502 = S {
     _regs :: !Registers,
     _debug :: !Bool,
 
-    _fileSystem :: FileSystem,
+    _currentDirectory :: Char,
     _sysclock :: !UTCTime,
     _handles :: M.IntMap VHandle
 }

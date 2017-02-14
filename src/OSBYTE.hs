@@ -25,6 +25,8 @@ osbyte a x y = do
         -- Enable/disable cursor editing
         4 -> do
             liftIO $ putStrLn $ "Cursor editing:" ++ show a ++ " " ++ show x ++ " " ++ show y
+        -- Wait for vertical sync
+        19 -> return ()
         -- Clear ESCAPE condition
         124 -> do
             liftIO $ putStrLn "Clear ESCAPE condition"
@@ -70,6 +72,9 @@ osbyte a x y = do
         135 -> do
             putX 0
             putY 7
+        -- Select tape filing system (*TAPE equivalent)
+        140 -> do
+            liftIO $ putStrLn $ "*TAPE " ++ show x
         -- Read/write *EXEC file handle.
         198 -> do
             putX 0

@@ -29,9 +29,9 @@ stringAt :: Emu6502 m => Word16 -> m String
 stringAt addr = do
     let loop cmd i = do
                     byte <- readMemory (addr+i16 i)
-                    if byte /= 0x0d
-                        then loop (cmd ++ [BS.w2c byte]) (i+1)
-                        else return cmd
+                    if byte == 0x0d || byte == 0x00
+                        then return cmd
+                        else loop (cmd ++ [BS.w2c byte]) (i+1)
     loop "" 0
 
 {-# INLINE word16At #-}
