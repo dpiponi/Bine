@@ -6,6 +6,8 @@ import Control.Monad.State
 import System.IO
 import System.Process
 import Utils
+import Core
+import KeyInput
 import Data.Char
 import MonadInput
 import Control.Lens hiding (noneOf)
@@ -23,7 +25,9 @@ import OSBYTE
 import OSFILE
 
 data Command = FX Int Int Int
-             | LOAD String Int deriving Show
+             | LOAD String Int -- <-- XXX needs to me Maybe Int
+             | RUN String -- XXX pass args
+             | KEY Int String deriving Show
 
 decimal :: ParsecT String u Identity Int
 decimal = do
@@ -41,30 +45,54 @@ filename :: ParsecT String u Identity String
 filename = (char '"' >> (many1 (noneOf "\"") <* char '"'))
            <|> many1 (noneOf " ")
 
+ignoreCase :: Stream s m Char => [Char] -> ParsecT s u m [Char]
+ignoreCase [] = return []
+ignoreCase (c : cs) = do
+    m <- char (toLower c) <|> char (toUpper c)
+    ms <- ignoreCase cs
+    return (m : ms)
+
 -- XXX Ignore case of commands
 parseCommand :: ParsecT String u Identity Command
 parseCommand = (FX <$> do
-                            (string "fx" >> spaces >> decimal)
+                            (ignoreCase "fx" >> spaces >> decimal)
                             <*> option 0 (spaces >> char ',' >> spaces >> decimal)
                             <*> option 0 (spaces >> char ',' >> spaces >> decimal))
                <|>
-               (LOAD <$> (string "load" >> spaces >> filename) <*> option 0 (spaces >> number 16 hexDigit))
-
-writeWord16 :: Emu6502 m => Word16 -> Word16 -> m ()
-writeWord16 i w = do
-    writeMemory i (fromIntegral w)
-    writeMemory (i+1) (fromIntegral $ w `shift` (-8))
-
-writeWord32 :: Emu6502 m => Word16 -> Word32 -> m ()
-writeWord32 i w = do
-    writeMemory i (fromIntegral w)
-    writeMemory (i+1) (fromIntegral $ w `shift` (-8))
-    writeMemory (i+2) (fromIntegral $ w `shift` (-16))
-    writeMemory (i+3) (fromIntegral $ w `shift` (-24))
+               (LOAD <$> (ignoreCase "load" >> spaces >> filename) <*> option 0 (spaces >> number 16 hexDigit))
+               <|>
+               (RUN <$> (ignoreCase "run" >> spaces >> (filename <* spaces)))
+               <|>
+               (KEY <$> (ignoreCase "key" >> spaces >> decimal) <*> many anyChar)
 
 execStarCommand :: (Emu6502 m, MonadState State6502 m) => Command -> m ()
-execStarCommand (FX a x y) = osbyte (i8 a) (i8 x) (i8 y)
+execStarCommand (FX a x y) = do
+    osbyte (i8 a) (i8 x) (i8 y)
+    p0 <- getPC
+    putPC $ p0+2
+execStarCommand (KEY key def) = do
+    keyQueue %= defineKey key (map BS.c2w def)
+    p0 <- getPC
+    putPC $ p0+2
 execStarCommand (LOAD filename loadAddress) = do
+    putA 0xff
+    -- Control block at &02EE
+    putX 0xee
+    putY 0x02
+    let addrFilename = 0x200 :: Word16
+    -- Write filename
+    forM_ (zip [addrFilename..] filename) $
+            \(i, d) -> writeMemory (fromIntegral i) (BS.c2w d)
+    -- Terminate filename with zero
+    writeMemory (fromIntegral addrFilename+fromIntegral (length filename)) 0
+    -- Write address of filename
+    writeWord16 0x2ee addrFilename
+    -- Set load address
+    writeWord32 (0x2ee+2) (fromIntegral loadAddress)
+    osfile
+    p0 <- getPC
+    putPC $ p0+2
+execStarCommand (RUN filename) = do
     putA 0xff
     -- Control block at &02EE
     putX 0xee
@@ -73,11 +101,16 @@ execStarCommand (LOAD filename loadAddress) = do
     forM_ (zip [addrFilename..] filename) $ \(i, d) -> writeMemory (fromIntegral i) (BS.c2w d)
     writeMemory (fromIntegral addrFilename+fromIntegral (length filename)) 0
     writeWord16 0x2ee addrFilename
-    writeWord32 (0x2ee+2) (fromIntegral loadAddress)
-    -- writeWord32 (0x2ee+6) execAddress
-    -- writeWord32 (0x2ee+10) saveStart
-    -- writeWord32 (0x2ee+14) saveEnd
+    -- Signal that we want to use load address alreday in file.
+    writeWord32 (0x2ee+6) 1
     osfile
+    fileExec <- word32At (0x2ee+6)
+    liftIO $ putStrLn $ "Executing from 0x" ++ showHex fileExec ""
+    -- Fake JSR
+    p0 <- getPC
+    push $ hi (p0+1)
+    push $ lo (p0+1)
+    putPC (i16 fileExec)
 
 {-# INLINABLE oscli #-}
 oscli :: (MonadState State6502 m, Emu6502 m) => m ()

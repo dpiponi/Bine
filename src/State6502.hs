@@ -14,6 +14,7 @@ import qualified Data.IntMap as M
 import System.IO
 import Data.ByteString as B
 import FileSystems
+import KeyInput
 
 data Registers = R {
     _pc :: !Word16,
@@ -62,7 +63,8 @@ data State6502 = S {
 
     _currentDirectory :: Char,
     _sysclock :: !UTCTime,
-    _handles :: M.IntMap VHandle
+    _handles :: M.IntMap VHandle,
+    _keyQueue :: KeyQueue
 }
 
 makeLenses ''State6502

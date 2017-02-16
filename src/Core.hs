@@ -7,7 +7,7 @@
 -- http://nesdev.com/6502_cpu.txt
 -- http://www.zimmers.net/anonftp/pub/cbm/documents/chipdata/64doc
 
-module Core(Emu6502(..), step, i8, i16, make16, irq, nmi) where
+module Core(Emu6502(..), step, i8, i16, make16, irq, nmi, push, lo, hi) where
 --module Core where
 
 import Prelude hiding (and)

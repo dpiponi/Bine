@@ -23,6 +23,7 @@ newtype Monad6502 a = M { unM :: StateT State6502 (InputT IO) a }
 
 instance MonadInput Monad6502 where
     inputLine = M . lift . getInputLine
+    inputLineWithInitial s t = M $ lift $ getInputLineWithInitial s t
 
 {-# INLINABLE stringAt #-}
 stringAt :: Emu6502 m => Word16 -> m String
@@ -57,3 +58,17 @@ putWord32 addr w = do
     writeMemory (addr+1) (i8 (w `shift` (-8)))
     writeMemory (addr+2) (i8 (w `shift` (-16)))
     writeMemory (addr+3) (i8 (w `shift` (-24)))
+
+{-# INLINE writeWord16 #-}
+writeWord16 :: Emu6502 m => Word16 -> Word16 -> m ()
+writeWord16 i w = do
+    writeMemory i (fromIntegral w)
+    writeMemory (i+1) (fromIntegral $ w `shift` (-8))
+
+{-# INLINE writeWord32 #-}
+writeWord32 :: Emu6502 m => Word16 -> Word32 -> m ()
+writeWord32 i w = do
+    writeMemory i (fromIntegral w)
+    writeMemory (i+1) (fromIntegral $ w `shift` (-8))
+    writeMemory (i+2) (fromIntegral $ w `shift` (-16))
+    writeMemory (i+3) (fromIntegral $ w `shift` (-24))

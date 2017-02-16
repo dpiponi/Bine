@@ -8,6 +8,8 @@ import Utils
 import MonadInput
 import Data.Time.Clock
 import Control.Lens
+import Data.List
+import KeyInput
 import State6502
 import Monad6502
 import Utils
@@ -28,7 +30,7 @@ osword = do
     case a of
         -- Read line.
         0x00 -> do
-            --liftIO $ hSetEcho stdin False
+            liftIO $ hSetEcho stdin True
             lo <- getX
             hi <- getY
             let addr = make16 lo hi
@@ -37,14 +39,29 @@ osword = do
             let sAddr = make16 sAddrLo sAddrHi
             --line <- liftIO $ getLine
             --Just line <- M $ lift $ getInputLine ""
-            Just line <- inputLine ""
+            queue <- use keyQueue
+            let (allkeys, queue') = allKeys queue
+            let (prefix, rest) = break (== 13) allkeys
+            line <- if null rest
+                then do
+                    -- XXX Need to deal with case where
+                    -- there is already a carriage return in prefix
+                    -- Implement allKeysUpToCR or something XXX
+                    keyQueue .= queue'
+                    Just line <- inputLineWithInitial "" (map BS.w2c prefix, "")
+                    return (map BS.c2w line)
+                else do
+                    keyQueue .= putKeys (tail rest) queue'
+                    liftIO $ putStrLn (map BS.w2c prefix)
+                    return prefix
             let n = length line
+            -- XXX redo with zip
             forM_ [0..n-1] $ \i -> do
-                writeMemory (sAddr+i16 i) (BS.c2w (line!!i))
-            writeMemory (sAddr+i16 n) 13
+                writeMemory (sAddr+i16 i) (line!!i)
+            writeMemory (sAddr+i16 n) 0xd
             putC False
             putY $ i8 n+1
-            --liftIO $ hSetEcho stdin True
+            liftIO $ hSetEcho stdin False
         
         -- Read system clock
         0x01 -> do

@@ -54,7 +54,13 @@ osfile = do
             startData32 <- word32At (blockAddr+0xa)
             addressType <- readMemory (blockAddr+0x6)
             (fileLoad, fileExec) <- liftIO $ getMetaData filename
-            let start = if addressType == 0 then fromIntegral loadAddr32 else fromIntegral fileLoad
+            -- If caller-specified execution address ends in zero
+            -- use user-specified load address
+            -- otherwise use load address in file
+            let start = if addressType == 0
+                then fromIntegral loadAddr32
+                else fromIntegral fileLoad
+            writeWord32 (blockAddr+0x6) fileExec
             liftIO $ putStrLn $ "Loading (OSFILE 0xff) from file '" ++ filename ++ "'"
             h <- liftIO $ openFile filename ReadMode
             liftIO $ putStrLn $ "hGetContents " ++ filename

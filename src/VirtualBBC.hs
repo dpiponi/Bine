@@ -123,6 +123,7 @@ instance Emu6502 Monad6502 where
             then do
                 -- host op
                 pp <- getPC
+                -- Retroactively fix PC
                 putPC $ pp-1
                 p0 <- getPC
                 op <- readMemory (p0+1)
@@ -130,39 +131,39 @@ instance Emu6502 Monad6502 where
                 case op of
                     0x00 -> do
                         liftIO $ exitSuccess
+                    -- WRCH
                     0x01 -> do
                         c <- getA
-                        liftIO $ putChar (BS.w2c c)
+                        case c of
+                            10 -> liftIO $ putStrLn "\x1b[0m"
+                            13 -> liftIO $ putStrLn "\x1b[0m"
+                            127 -> liftIO $ putStr "\b \b"
+                            -- Red
+                            129 -> liftIO $ putStr "\x1b[31m"
+                            -- Green
+                            130 -> liftIO $ putStr "\x1b[32m"
+                            -- Blue
+                            131 -> liftIO $ putStr "\x1b[32m"
+                            132 -> liftIO $ putStr "\x1b[33m"
+                            133 -> liftIO $ putStr "\x1b[34m"
+                            134 -> liftIO $ putStr "\x1b[35m"
+                            135 -> liftIO $ putStr "\x1b[36m"
+                            -- Flash
+                            --136 -> liftIO $ putStr "\x1b[5m"
+                            --137 flash off
+                            _ -> if c >=32 && c < 127
+                                    then liftIO $ putChar (BS.w2c c)
+                                    else liftIO $ putStr $ "<" ++ showHex c "" ++ ">"
                         putPC $ p0+2
+                    -- RDCH
                     0x02 -> do
-                        --liftIO $ putStrLn "OSRDCH"
                         c <- liftIO $ getChar
-                        --liftIO $ print $ (c, ord c)
                         putA (translateKey $ BS.c2w c)
                         putPC $ p0+2
-                        {-
-                    -- read line
-                    0x03 -> do
-                        lo <- getX
-                        hi <- getY
-                        let addr = make16 lo hi
-                        sAddrLo <- readMemory addr
-                        sAddrHi <- readMemory (addr+1)
-                        let sAddr = make16 sAddrLo sAddrHi
-                        --line <- liftIO $ getLine
-                        Just line <- M $ lift $ getInputLine ""
-                        let n = length line
-                        forM_ [0..n-1] $ \i -> do
-                            writeMemory (sAddr+i16 i) (BS.c2w (line!!i))
-                        writeMemory (sAddr+i16 n) 13
-                        putC False
-                        putY $ i8 n+1
-                        putPC $ p0+2
-                        -}
                     -- CLI
                     0x04 -> do
                         oscli
-                        putPC $ p0+2
+                        --putPC $ p0+2
                     -- HBYTE
                     0x05 -> do
                         a <- getA
