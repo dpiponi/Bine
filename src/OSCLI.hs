@@ -27,7 +27,8 @@ import OSFILE
 data Command = FX Int Int Int
              | LOAD String Int -- <-- XXX needs to me Maybe Int
              | RUN String -- XXX pass args
-             | KEY Int String deriving Show
+             | KEY Int String
+             | DIR Char deriving Show
 
 decimal :: ParsecT String u Identity Int
 decimal = do
@@ -64,6 +65,8 @@ parseCommand = (FX <$> do
                (RUN <$> (ignoreCase "run" >> spaces >> (filename <* spaces)))
                <|>
                (KEY <$> (ignoreCase "key" >> spaces >> decimal) <*> many anyChar)
+               <|>
+               (DIR <$> (ignoreCase "dir" >> spaces >> anyChar))
 
 execStarCommand :: (Emu6502 m, MonadState State6502 m) => Command -> m ()
 execStarCommand (FX a x y) = do
@@ -111,6 +114,10 @@ execStarCommand (RUN filename) = do
     push $ hi (p0+1)
     push $ lo (p0+1)
     putPC (i16 fileExec)
+execStarCommand (DIR dirname) = do
+    currentDirectory .= dirname
+    p0 <- getPC
+    putPC $ p0+2
 
 {-# INLINABLE oscli #-}
 oscli :: (MonadState State6502 m, Emu6502 m) => m ()

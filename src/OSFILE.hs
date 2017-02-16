@@ -20,6 +20,12 @@ import qualified Data.ByteString.Internal as BS (c2w, w2c)
 import Data.Word
 import Numeric
 
+hostFileName :: (MonadState State6502 m, Emu6502 m) => String -> m String
+hostFileName name@(_ : '.' : _) = return name
+hostFileName name = do
+    dir <- use currentDirectory
+    return $ dir : '.' : name
+
 -- http://mdfs.net/Docs/Comp/BBC/API/OSFILE.htm
 {-# INLINABLE osfile #-}
 osfile :: (MonadState State6502 m, Emu6502 m) => m ()
@@ -30,8 +36,11 @@ osfile = do
 
     let blockAddr = make16 x y
     stringAddr <- word16At blockAddr
-    filename <- stringAt stringAddr
+    rawFilename <- stringAt stringAddr
+    hostName <- hostFileName rawFilename
     
+    -- Note that the 'end' field points to the last byte,
+    -- not the first byte after the end.
     case a of
         -- Save a section of memory as a named file.
         -- The file’s catalogue information is also written.
@@ -40,9 +49,9 @@ osfile = do
             endData32 <- word32At (blockAddr+0xe)
             let start = i16 startData32
             let end = i16 endData32
-            liftIO $ putStrLn $ "Saving " ++ showHex start "" ++ ":" ++ showHex end "" ++ " to " ++ filename
-            h <- liftIO $ openFile filename WriteMode
-            forM_ [start..end-1] $ \i -> do
+            liftIO $ putStrLn $ "Saving " ++ showHex start "" ++ ":" ++ showHex end "" ++ " to " ++ hostName
+            h <- liftIO $ openBinaryFile hostName WriteMode
+            forM_ [start..end] $ \i -> do
                 x <- readMemory i
                 liftIO $ hPutChar h (BS.w2c x)
             liftIO $ hClose h
@@ -53,7 +62,7 @@ osfile = do
             execAddr32 <- word32At (blockAddr+0x6)
             startData32 <- word32At (blockAddr+0xa)
             addressType <- readMemory (blockAddr+0x6)
-            (fileLoad, fileExec) <- liftIO $ getMetaData filename
+            (fileLoad, fileExec) <- liftIO $ getMetaData hostName
             -- If caller-specified execution address ends in zero
             -- use user-specified load address
             -- otherwise use load address in file
@@ -61,13 +70,13 @@ osfile = do
                 then fromIntegral loadAddr32
                 else fromIntegral fileLoad
             writeWord32 (blockAddr+0x6) fileExec
-            liftIO $ putStrLn $ "Loading (OSFILE 0xff) from file '" ++ filename ++ "'"
-            h <- liftIO $ openFile filename ReadMode
-            liftIO $ putStrLn $ "hGetContents " ++ filename
+            liftIO $ putStrLn $ "Loading (OSFILE 0xff) from file '" ++ hostName ++ "'"
+            h <- liftIO $ openBinaryFile hostName ReadMode
+            liftIO $ putStrLn $ "hGetContents " ++ hostName
             bytes <- liftIO $ B.hGetContents h
             let len = B.length bytes
             let end = start+fromIntegral len
-            liftIO $ putStrLn $ "!!Loading " ++ showHex start "" ++ ":" ++ showHex end "" ++ " from " ++ filename
+            liftIO $ putStrLn $ "!!Loading " ++ showHex start "" ++ ":" ++ showHex end "" ++ " from " ++ hostName
             forM_ (zip [start..end-1] (map BS.w2c $ B.unpack bytes)) $ \(i, d) -> writeMemory i (BS.c2w d)
             liftIO $ print "Done"
             liftIO $ hClose h
