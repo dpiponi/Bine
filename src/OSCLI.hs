@@ -28,7 +28,8 @@ data Command = FX Int Int Int
              | LOAD String Int -- <-- XXX needs to me Maybe Int
              | RUN String -- XXX pass args
              | KEY Int String
-             | DIR Char deriving Show
+             | DIR Char
+             | TAPE Int deriving Show
 
 decimal :: ParsecT String u Identity Int
 decimal = do
@@ -48,8 +49,20 @@ filename = (char '"' >> (many1 (noneOf "\"") <* char '"'))
 
 ignoreCase :: Stream s m Char => [Char] -> ParsecT s u m [Char]
 ignoreCase [] = return []
+ignoreCase (c : cs) | isUpper c = do
+    m <- char (toLower c) <|> char c
+    ms <- ignoreCase cs
+    return (m : ms)
+ignoreCase (c : cs) | isLower c = do
+    m <- char '.' <|> char c <|> char (toUpper c)
+    if m == '.'
+        then
+            return "."
+        else do
+            ms <- ignoreCase cs
+            return (m : ms)
 ignoreCase (c : cs) = do
-    m <- char (toLower c) <|> char (toUpper c)
+    m <- char c
     ms <- ignoreCase cs
     return (m : ms)
 
@@ -60,13 +73,15 @@ parseCommand = (FX <$> do
                             <*> option 0 (spaces >> char ',' >> spaces >> decimal)
                             <*> option 0 (spaces >> char ',' >> spaces >> decimal))
                <|>
-               (LOAD <$> (ignoreCase "load" >> spaces >> filename) <*> option 0 (spaces >> number 16 hexDigit))
+               (TAPE <$> (ignoreCase "TAPE" >> spaces >> option 0 decimal))
                <|>
-               (RUN <$> (ignoreCase "run" >> spaces >> (filename <* spaces)))
+               (LOAD <$> (ignoreCase "LOad" >> spaces >> filename) <*> option 0 (spaces >> number 16 hexDigit))
                <|>
-               (KEY <$> (ignoreCase "key" >> spaces >> decimal) <*> many anyChar)
+               (RUN <$> (ignoreCase "Run" >> spaces >> (filename <* spaces)))
                <|>
-               (DIR <$> (ignoreCase "dir" >> spaces >> anyChar))
+               (KEY <$> (ignoreCase "KEY" >> spaces >> decimal) <*> many anyChar)
+               <|>
+               (DIR <$> (ignoreCase "DIR" >> spaces >> anyChar))
 
 execStarCommand :: (Emu6502 m, MonadState State6502 m) => Command -> m ()
 execStarCommand (FX a x y) = do
@@ -74,7 +89,7 @@ execStarCommand (FX a x y) = do
     p0 <- getPC
     putPC $ p0+2
 execStarCommand (KEY key def) = do
-    keyQueue %= defineKey key (map BS.c2w def)
+    defineKey key (map BS.c2w def)
     p0 <- getPC
     putPC $ p0+2
 execStarCommand (LOAD filename loadAddress) = do
@@ -91,7 +106,14 @@ execStarCommand (LOAD filename loadAddress) = do
     -- Write address of filename
     writeWord16 0x2ee addrFilename
     -- Set load address
-    writeWord32 (0x2ee+2) (fromIntegral loadAddress)
+    if loadAddress == 0
+        then
+            -- Use address in file
+            writeWord32 (0x2ee+6) (fromIntegral 1)
+        else do
+            -- Use user specified address
+            writeWord32 (0x2ee+6) (fromIntegral 0)
+            writeWord32 (0x2ee+2) (fromIntegral loadAddress)
     osfile
     p0 <- getPC
     putPC $ p0+2
@@ -116,6 +138,10 @@ execStarCommand (RUN filename) = do
     putPC (i16 fileExec)
 execStarCommand (DIR dirname) = do
     currentDirectory .= dirname
+    p0 <- getPC
+    putPC $ p0+2
+execStarCommand (TAPE t) = do
+    liftIO $ putStrLn $ "*TAPE " ++ show t
     p0 <- getPC
     putPC $ p0+2
 

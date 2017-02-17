@@ -36,22 +36,25 @@ osword = do
             let addr = make16 lo hi
             sAddrLo <- readMemory addr
             sAddrHi <- readMemory (addr+1)
+            maxLength <- readMemory (addr+2)
+            minChar <- readMemory (addr+3)
+            maxChar <- readMemory (addr+4)
             let sAddr = make16 sAddrLo sAddrHi
             --line <- liftIO $ getLine
             --Just line <- M $ lift $ getInputLine ""
             queue <- use keyQueue
-            let (allkeys, queue') = allKeys queue
+            -- Write fn to just get chars up to 0xd XXX
+            allkeys <- allKeys
             let (prefix, rest) = break (== 13) allkeys
             line <- if null rest
                 then do
                     -- XXX Need to deal with case where
                     -- there is already a carriage return in prefix
                     -- Implement allKeysUpToCR or something XXX
-                    keyQueue .= queue'
                     Just line <- inputLineWithInitial "" (map BS.w2c prefix, "")
                     return (map BS.c2w line)
                 else do
-                    keyQueue .= putKeys (tail rest) queue'
+                    putKeys (tail rest)
                     liftIO $ putStrLn (map BS.w2c prefix)
                     return prefix
             let n = length line
@@ -60,7 +63,10 @@ osword = do
                 writeMemory (sAddr+i16 i) (line!!i)
             writeMemory (sAddr+i16 n) 0xd
             putC False
-            putY $ i8 n+1
+            -- Hard to find definitive documentation on
+            -- whether this is n or n+1
+            putY $ i8 n
+            --putY $ i8 n+1
             liftIO $ hSetEcho stdin False
         
         -- Read system clock

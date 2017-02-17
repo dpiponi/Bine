@@ -74,7 +74,7 @@ osbyte a x y = do
             putX 0
             putY 7
         -- Place character into buffer
-        138 -> when (x == 0) $ keyQueue %= insertKey y
+        138 -> when (x == 0) $ insertKey y
         -- Select tape filing system (*TAPE equivalent)
         140 -> do
             liftIO $ putStrLn $ "*TAPE " ++ show x

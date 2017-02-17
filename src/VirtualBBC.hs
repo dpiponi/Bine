@@ -7,6 +7,7 @@ import qualified Data.ByteString as B
 import qualified Data.ByteString.Internal as BS (c2w, w2c)
 import Data.Array.IO
 import Control.Monad.State
+import VDUOutput
 import Control.Lens
 import System.IO.Error
 import Data.Char
@@ -30,6 +31,7 @@ import OSCLI
 import Core
 import State6502
 import Monad6502
+import VDUOutput
 
 translateKey :: Word8 -> Word8
 translateKey 10 = 13
@@ -134,26 +136,9 @@ instance Emu6502 Monad6502 where
                     -- WRCH
                     0x01 -> do
                         c <- getA
-                        case c of
-                            10 -> liftIO $ putStrLn "\x1b[0m"
-                            13 -> liftIO $ putStrLn "\x1b[0m"
-                            127 -> liftIO $ putStr "\b \b"
-                            -- Red
-                            129 -> liftIO $ putStr "\x1b[31m"
-                            -- Green
-                            130 -> liftIO $ putStr "\x1b[32m"
-                            -- Blue
-                            131 -> liftIO $ putStr "\x1b[32m"
-                            132 -> liftIO $ putStr "\x1b[33m"
-                            133 -> liftIO $ putStr "\x1b[34m"
-                            134 -> liftIO $ putStr "\x1b[35m"
-                            135 -> liftIO $ putStr "\x1b[36m"
-                            -- Flash
-                            --136 -> liftIO $ putStr "\x1b[5m"
-                            --137 flash off
-                            _ -> if c >=32 && c < 127
-                                    then liftIO $ putChar (BS.w2c c)
-                                    else liftIO $ putStr $ "<" ++ showHex c "" ++ ">"
+                        queue <- use vduQueue
+                        queue' <- liftIO $ writeChar c queue
+                        vduQueue .= queue'
                         putPC $ p0+2
                     -- RDCH
                     0x02 -> do

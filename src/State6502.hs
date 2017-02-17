@@ -4,17 +4,19 @@
 module State6502 where
 
 import Data.Word
+import Deque
+import Data.Array
 import Data.Time.Clock
 import Control.Lens
 import Control.Monad.State
 import Data.Bits.Lens
+import VDUOutput
 import System.Console.Haskeline
 import Data.Array.IO
 import qualified Data.IntMap as M
 import System.IO
 import Data.ByteString as B
 import FileSystems
-import KeyInput
 
 data Registers = R {
     _pc :: !Word16,
@@ -55,6 +57,11 @@ flagV = p . bitAt 6
 flagN :: Lens' Registers Bool
 flagN = p . bitAt 7
 
+data KeyInput = KeyInput {
+                    buffer :: Deque Word8,
+                    keydefs :: Array Int [Word8]
+                }
+
 data State6502 = S {
     _mem :: IOUArray Int Word8,
     _clock :: !Int,
@@ -64,7 +71,8 @@ data State6502 = S {
     _currentDirectory :: Char,
     _sysclock :: !UTCTime,
     _handles :: M.IntMap VHandle,
-    _keyQueue :: KeyQueue
+    _keyQueue :: KeyInput,
+    _vduQueue :: VDUOutput
 }
 
 makeLenses ''State6502

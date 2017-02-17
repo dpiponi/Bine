@@ -33,6 +33,7 @@ import Intel hiding (hexWord16, fromHex)
 import VirtualBBC
 import System.Posix.Signals
 import KeyInput
+import VDUOutput
 import qualified Data.ByteString.Internal as BS (c2w, w2c)
 --import Vanilla
 --import Atari
@@ -112,7 +113,8 @@ main = do
     --fs <- loadfs
     let state = S { _mem = arr,  _clock = 0, _regs = R entryPoint 0 0 0 0 0xff,
                     _debug = verbose args, _handles = I.empty, _sysclock = systime,
-                    _currentDirectory = '$', _keyQueue = emptyQueue }
+                    _currentDirectory = '$', _keyQueue = emptyQueue,
+                    _vduQueue = emptyVDUQueue }
     
     interrupted <- newEmptyMVar :: IO (MVar Int)
     installHandler sigINT (Catch $ handler interrupted) Nothing

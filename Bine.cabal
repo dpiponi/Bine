@@ -16,7 +16,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   ghc-options:         -O5 -fwarn-missing-signatures -funbox-strict-fields -fsimpl-tick-factor=200
-  exposed-modules:     Core, Intel, Binary, VirtualBBC, OSFIND, OSFILE, OSCLI, OSWORD, OSBYTE, Monad6502, Utils, State6502, FileSystems, MetaData, KeyInput, MonadInput
+  exposed-modules:     Core, Intel, Binary, VirtualBBC, OSFIND, OSFILE, OSCLI, OSWORD, OSBYTE, Monad6502, Utils, State6502, FileSystems, MetaData, KeyInput, MonadInput, VDUOutput
   build-depends:       base >= 4.7 && < 5
                      , sdl2
                      , bytestring
