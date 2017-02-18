@@ -23,7 +23,7 @@ extra_bytes = listArray (0, 31) extra_bytes_list
 emptyVDUQueue :: VDUOutput
 emptyVDUQueue = VDUOutput [] 0
 complexVDU :: [Word8] -> IO ()
---complexVDU (25 : k : xlo : xhi : ylo : yhi) = tracelog $ printf "PLOT %d, %d, %d" k (fromIntegral (make16 xlo xhi) :: Int16) (fromIntegral (make16 ylo yhi) :: Int16)
+complexVDU (25 : k : xlo : xhi : ylo : yhi) = tracelog $ printf "PLOT %d, %d, %d" k (fromIntegral (make16 xlo xhi) :: Int16) (fromIntegral (make16 ylo yhi) :: Int16)
 complexVDU cs = putStr $ show cs
 
 writeOrdinaryChar :: Word8 -> IO ()
