@@ -139,7 +139,7 @@ instance Emu6502 Monad6502 where
                     0x01 -> do
                         c <- getA
                         queue <- use vduQueue
-                        queue' <- liftIO $ writeChar c queue
+                        queue' <- writeChar c queue
                         vduQueue .= queue'
                         putPC $ p0+2
                     -- RDCH

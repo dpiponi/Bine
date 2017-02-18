@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+
 module VDUOutput where
 
 import Control.Monad.IO.Class
@@ -5,7 +7,9 @@ import Control.Monad.State
 import Core
 import Data.Array
 import Data.ByteString.Internal as BS
+import Data.List
 import Data.Int
+import TraceLog
 import Data.Word
 import Monad6502
 import State6502
@@ -22,11 +26,19 @@ extra_bytes = listArray (0, 31) extra_bytes_list
 
 emptyVDUQueue :: VDUOutput
 emptyVDUQueue = VDUOutput [] 0
-complexVDU :: [Word8] -> IO ()
-complexVDU (25 : k : xlo : xhi : ylo : yhi) = tracelog $ printf "PLOT %d, %d, %d" k (fromIntegral (make16 xlo xhi) :: Int16) (fromIntegral (make16 ylo yhi) :: Int16)
-complexVDU cs = putStr $ show cs
 
-writeOrdinaryChar :: Word8 -> IO ()
+complexVDU :: (MonadState State6502 m, Emu6502 m) => [Word8] -> m ()
+complexVDU [18, a, b] = tracelog $ printf " (Define graphics colour %d, %d)" a b
+complexVDU [22, m] = tracelog $ printf " (MODE %d)" m
+complexVDU [25, k, xlo, xhi, ylo, yhi] =
+    tracelog $ printf " (PLOT %d, %d, %d)"
+                      k (fromIntegral (make16 xlo xhi) :: Int16)
+                        (fromIntegral (make16 ylo yhi) :: Int16)
+complexVDU [28, a, b, c, d] =
+    tracelog $ printf " (Define text window %d %d %d %d)" a b c d
+complexVDU cs = liftIO $ putStr $ show cs
+
+writeOrdinaryChar :: (MonadState State6502 m, Emu6502 m) => Word8 -> m ()
 writeOrdinaryChar c = 
     case c of
         127 -> liftIO $ putStr "\b \b"
@@ -45,19 +57,26 @@ writeOrdinaryChar c =
         --137 flash off
         _ -> liftIO $ putChar (BS.w2c c)
 
-writeSpecialChar :: Word8 -> IO ()
+writeSpecialChar :: (MonadState State6502 m, Emu6502 m) => Word8 -> m ()
 writeSpecialChar c = 
     case c of
         10 -> liftIO $ putStrLn "\x1b[0m"
+        12 -> liftIO $ putStrLn "\x1b[2J\x1b[;H"
         13 -> liftIO $ putStrLn "\x1b[0m"
+        14 -> tracelog " (Paged mode on)"
+        15 -> tracelog " (Paged mode off)"
+        16 -> tracelog " (Clear graphics area)"
+        20 -> tracelog " (Restore default logical colours)"
         _ -> liftIO $ putStr $ "<" ++ show c ++ ">"
 
-writeChar :: Word8 -> VDUOutput -> IO VDUOutput
+writeChar :: (MonadState State6502 m, Emu6502 m) => Word8 -> VDUOutput -> m VDUOutput
 writeChar c (VDUOutput b n) | n > 1 = return $ VDUOutput (b ++ [c]) (n-1)
 writeChar c (VDUOutput b n) | n == 1 = do
+    tracelog $ printf "VDU %s" (intercalate ", " (map show (b ++ [c])))
     complexVDU (b ++ [c])
     return $ VDUOutput [] 0
 writeChar c v@(VDUOutput _ 0) | c < 32 && extra_bytes!c == 0 = do
+    tracelog $ printf "VDU %d" c
     writeSpecialChar c
     return v
 writeChar c (VDUOutput _ 0) | c < 32 = return $ VDUOutput [c] (extra_bytes!c)
