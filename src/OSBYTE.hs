@@ -20,6 +20,28 @@ import Data.Bits
 import TraceLog
 import Text.Printf
 
+inkey :: (MonadState State6502 m, Emu6502 m) => Word8 -> Word8 -> m ()
+inkey x y = do
+    tracelog " Read key with time limit..."
+    if y < 0xff
+        then do
+            result <- liftIO $ hWaitForInput stdin (10*fromIntegral (make16 x y))
+            if result
+                then do
+                    k <- liftIO getChar
+                    putX (BS.c2w k)
+                    putY 0
+                    putC False
+                    tracelog $ printf " ...got key %d" k
+                else do
+                    putY 0xff
+                    putC True
+                    tracelog " ...timed out"
+        else do
+            tracelog $ printf " (Key scan for %02x)" x
+            putX 0
+            putY 0
+
 {-# INLINABLE osbyte #-}
 osbyte :: (MonadState State6502 m, Emu6502 m) => Word8 -> Word8 -> Word8 -> m ()
 osbyte a x y = do
@@ -33,6 +55,12 @@ osbyte a x y = do
         19 -> do
             tracelog " (Wait for vertical sync)"
             return ()
+        -- Flush specific buffer
+        21 -> if x == 0
+                then do
+                    tracelog " Flush keyboard buffer"
+                    removeKeys
+                else tracelog $ printf " (Flush buffer %d)" x
         -- Clear ESCAPE condition
         124 -> do
             tracelog " (Clear ESCAPE condition)"
@@ -42,23 +70,7 @@ osbyte a x y = do
             writeMemory 0xff 0x00
             putX esc
         -- Read key with time limit
-        129 -> do
-            tracelog " Read key with time limit..."
-            if y < 0xff
-                then do
-                    result <- liftIO $ hWaitForInput stdin (10*fromIntegral (make16 x y))
-                    if result
-                        then do
-                            k <- liftIO getChar
-                            putX (BS.c2w k)
-                            putY 0
-                            putC False
-                            tracelog $ printf " ...got key %d" k
-                        else do
-                            putY 0xff
-                            putC True
-                            tracelog " ...timed out"
-                else tracelog $ printf " Unhandled OSBYTE call A=%02x X=%02x Y=%02x " a x y
+        129 -> inkey x y
         -- Read machine high order address
         130 -> do
             tracelog " Read machine high order address"

@@ -11,6 +11,8 @@ import VDUOutput
 import Control.Lens
 import System.IO.Error
 import Data.Char
+import TraceLog
+import Text.Printf
 import Data.Bits.Lens
 import Utils
 import Data.Foldable
@@ -142,8 +144,10 @@ instance Emu6502 Monad6502 where
                         putPC $ p0+2
                     -- RDCH
                     0x02 -> do
+                        tracelog "OSRDCH..."
                         c <- liftIO $ getChar
                         putA (translateKey $ BS.c2w c)
+                        tracelog $ printf "...got character %d" c
                         putPC $ p0+2
                     -- CLI
                     0x04 -> do

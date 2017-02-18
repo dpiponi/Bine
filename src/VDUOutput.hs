@@ -3,6 +3,9 @@ module VDUOutput where
 import Control.Monad.IO.Class
 import Data.Array
 import Data.Word
+--import Text.Printf
+--import TraceLog
+import Data.Int
 import Data.ByteString.Internal as BS
 
 extra_bytes_list :: [Int]
@@ -19,10 +22,10 @@ data VDUOutput = VDUOutput {
                     requiredChars :: Int
                  }
 
-
 emptyVDUQueue :: VDUOutput
 emptyVDUQueue = VDUOutput [] 0
 complexVDU :: [Word8] -> IO ()
+--complexVDU (25 : k : xlo : xhi : ylo : yhi) = tracelog $ printf "PLOT %d, %d, %d" k (fromIntegral (make16 xlo xhi) :: Int16) (fromIntegral (make16 ylo yhi) :: Int16)
 complexVDU cs = putStr $ show cs
 
 writeOrdinaryChar :: Word8 -> IO ()
