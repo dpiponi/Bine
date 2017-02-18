@@ -180,6 +180,7 @@ instance Emu6502 Monad6502 where
                         a <- getA
                         x <- getX
                         y <- getY
+                        tracelog $ printf "OSBGET A=%02x X=%02x Y=%02x" a x y
                         hs <- use handles
                         let k = fromIntegral y
                         let mh = M.lookup k hs
@@ -212,6 +213,7 @@ instance Emu6502 Monad6502 where
                         a <- getA
                         x <- getX
                         y <- getY
+                        tracelog $ printf "OSBPUT A=%02x X=%02x Y=%02x" a x y
                         hs <- use handles
                         let k = fromIntegral y
                         let mh = M.lookup k hs
