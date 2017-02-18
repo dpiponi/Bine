@@ -10,7 +10,6 @@ import Data.Time.Clock
 import Control.Lens
 import Control.Monad.State
 import Data.Bits.Lens
-import VDUOutput
 import System.Console.Haskeline
 import Data.Array.IO
 import qualified Data.IntMap as M
@@ -61,6 +60,11 @@ data KeyInput = KeyInput {
                     buffer :: Deque Word8,
                     keydefs :: Array Int [Word8]
                 }
+
+data VDUOutput = VDUOutput {
+                    vbuffer :: [Word8],
+                    requiredChars :: Int
+                 }
 
 data State6502 = S {
     _mem :: IOUArray Int Word8,

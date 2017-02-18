@@ -1,12 +1,15 @@
 module VDUOutput where
 
 import Control.Monad.IO.Class
+import Control.Monad.State
+import Core
 import Data.Array
-import Data.Word
---import Text.Printf
---import TraceLog
-import Data.Int
 import Data.ByteString.Internal as BS
+import Data.Int
+import Data.Word
+import Monad6502
+import State6502
+import Text.Printf
 
 extra_bytes_list :: [Int]
 extra_bytes_list = [0, 1, 0, 0, 0, 0, 0, 0,
@@ -16,11 +19,6 @@ extra_bytes_list = [0, 1, 0, 0, 0, 0, 0, 0,
 
 extra_bytes :: Array Word8 Int
 extra_bytes = listArray (0, 31) extra_bytes_list
-
-data VDUOutput = VDUOutput {
-                    vbuffer :: [Word8],
-                    requiredChars :: Int
-                 }
 
 emptyVDUQueue :: VDUOutput
 emptyVDUQueue = VDUOutput [] 0
