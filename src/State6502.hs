@@ -72,7 +72,8 @@ data State6502 = S {
     _sysclock :: !UTCTime,
     _handles :: M.IntMap VHandle,
     _keyQueue :: KeyInput,
-    _vduQueue :: VDUOutput
+    _vduQueue :: VDUOutput,
+    _logFile :: Maybe Handle
 }
 
 makeLenses ''State6502

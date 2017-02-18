@@ -17,27 +17,33 @@ import qualified Data.ByteString.Internal as BS (c2w, w2c)
 import Data.Word
 import Numeric
 import Data.Bits
+import TraceLog
+import Text.Printf
 
 {-# INLINABLE osbyte #-}
 osbyte :: (MonadState State6502 m, Emu6502 m) => Word8 -> Word8 -> Word8 -> m ()
 osbyte a x y = do
+    tracelog $ printf "OSBYTE A=%02x X=%02x Y=%02x" a x y
     --liftIO $ putStrLn $ "OSBYTE " ++ show (a, x, y)
     case a of
         -- Enable/disable cursor editing
         4 -> do
-            liftIO $ putStrLn $ "Cursor editing:" ++ show a ++ " " ++ show x ++ " " ++ show y
+            tracelog " (Enable/disable cursor editing)"
         -- Wait for vertical sync
-        19 -> return ()
+        19 -> do
+            tracelog " (Wait for vertical sync)"
+            return ()
         -- Clear ESCAPE condition
         124 -> do
-            liftIO $ putStrLn "Clear ESCAPE condition"
+            tracelog " (Clear ESCAPE condition)"
         126 -> do
-            liftIO $ putStrLn "Acknowledge ESCAPE condition"
+            tracelog " Acknowledge ESCAPE condition"
             esc <- readMemory 0xff
             writeMemory 0xff 0x00
             putX esc
         -- Read key with time limit
         129 -> do
+            tracelog " Read key with time limit..."
             if y < 0xff
                 then do
                     result <- liftIO $ hWaitForInput stdin (10*fromIntegral (make16 x y))
@@ -47,37 +53,46 @@ osbyte a x y = do
                             putX (BS.c2w k)
                             putY 0
                             putC False
+                            tracelog $ printf " ...got key %d" k
                         else do
                             putY 0xff
                             putC True
-                else error $ "Unknown OSBYTE call " ++ show a ++ "," ++ show x ++ "," ++ show y
+                            tracelog " ...timed out"
+                else tracelog $ printf " Unhandled OSBYTE call A=%02x X=%02x Y=%02x " a x y
         -- Read machine high order address
         130 -> do
+            tracelog " Read machine high order address"
             putX 0xff
             putY 0xff
         -- Read top of operating system RAM address (OSHWM)
         131 -> do
+            tracelog " Read top of operating system RAM address (OSHWM)"
             putX 0x00
             putY 0x0e
         -- Read bottom of display RAM address (HIMEM)
         132 -> do
+            tracelog " Read bottom of display RAM address (HIMEM)"
             putX 0x00
             putY 0x80
         -- Read bottom of display RAM for a specified mode
         133 -> do
+            tracelog " Read bottom of display RAM for a specified mode"
             putX 0x00
             putY 0x80
         -- Read character at text cursor position.
         -- Docs say to use 0 if character not recognised.
         -- Lying about mode 7.
         135 -> do
+            tracelog " (Read character at text cursor position.)"
             putX 0
             putY 7
         -- Place character into buffer
-        138 -> when (x == 0) $ insertKey y
+        138 -> do
+            tracelog $ printf " Place character %d into buffer %d" y x
+            when (x == 0) $ insertKey y
         -- Select tape filing system (*TAPE equivalent)
         140 -> do
-            liftIO $ putStrLn $ "*TAPE " ++ show x
+            tracelog $ printf " (TAPE %d)" x
         -- Read/write *EXEC file handle.
         198 -> do
             putX 0
@@ -105,4 +120,4 @@ osbyte a x y = do
                     putX old
                     putY next
 
-                else error $ "Unknown OSBYTE call " ++ show a ++ "," ++ show x ++ "," ++ show y
+                else tracelog $ printf " Unknown OSBYTE call A=%02x X=%02x Y=%02x " a x y

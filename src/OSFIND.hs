@@ -25,6 +25,8 @@ closeFile (BHandle _ _) = return ()
 closeAllFiles :: M.IntMap VHandle -> IO ()
 closeAllFiles hs = forM_ hs closeFile
 
+-- XXX Update to use hostName
+
 {-# INLINABLE osfind #-}
 osfind :: (MonadState State6502 m, Emu6502 m) => m ()
 osfind = do

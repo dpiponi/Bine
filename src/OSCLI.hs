@@ -6,6 +6,8 @@ import Control.Monad.State
 import System.IO
 import System.Process
 import Utils
+import TraceLog
+import Text.Printf
 import Core
 import KeyInput
 import Data.Char
@@ -152,6 +154,7 @@ oscli = do
     hi <- getY
     let addr = make16 lo hi
     cmd <- stringAt addr
+    tracelog $ printf "OSCLI: %s" cmd
     let cmd' = removeStars cmd
     liftIO $ putStrLn cmd'
     let cmd'' = parse parseCommand "" cmd'

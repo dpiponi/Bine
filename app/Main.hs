@@ -10,6 +10,7 @@ import Data.Word
 import FileSystems
 import Data.Time.Clock
 import Monad6502
+import Text.Printf
 import State6502
 import Control.Monad.State
 import Control.Concurrent.MVar
@@ -34,6 +35,7 @@ import VirtualBBC
 import System.Posix.Signals
 import KeyInput
 import VDUOutput
+import TraceLog
 import qualified Data.ByteString.Internal as BS (c2w, w2c)
 --import Vanilla
 --import Atari
@@ -41,10 +43,12 @@ import qualified Data.ByteString.Internal as BS (c2w, w2c)
 data Args = Args { verbose :: Bool,
                    file :: String,
                    org :: String,
-                   entry :: String } deriving (Show, Data, Typeable)
+                   entry :: String,
+                   logfile :: Maybe String } deriving (Show, Data, Typeable)
 
 clargs :: Args
-clargs = Args { verbose = False, org = "0", entry = "0", file = "test.bin" }
+clargs = Args { verbose = False, org = "0", entry = "0", file = "test.bin",
+                logfile = Nothing }
 
 times :: (Integral n, Monad m) => n -> m a -> m ()
 times 0 _ = return ()
@@ -107,6 +111,12 @@ main = do
     let Right specs = parse filespecs "" (file args)
     forM_ specs $ \spec ->
         loadFile arr spec
+
+    logHandle <- case logfile args of
+        Nothing -> return Nothing
+        Just logName -> do
+            handle <- openFile logName WriteMode
+            return $ Just handle
         
     let [(entryPoint, _)] = readHex (entry args)
     systime <- getCurrentTime
@@ -114,14 +124,14 @@ main = do
     let state = S { _mem = arr,  _clock = 0, _regs = R entryPoint 0 0 0 0 0xff,
                     _debug = verbose args, _handles = I.empty, _sysclock = systime,
                     _currentDirectory = '$', _keyQueue = emptyQueue,
-                    _vduQueue = emptyVDUQueue }
+                    _vduQueue = emptyVDUQueue, _logFile = logHandle }
     
     interrupted <- newEmptyMVar :: IO (MVar Int)
     installHandler sigINT (Catch $ handler interrupted) Nothing
 
-    putStrLn $ "Executing from 0x" ++ showHex entryPoint ""
     --flip execStateT state $ unM $ forever (inline step)
-    runInputT defaultSettings $ flip execStateT state $ unM $
+    runInputT defaultSettings $ flip execStateT state $ unM $ do
+        tracelog $ printf "\nExecuting from address %04x" entryPoint
         forever $ do
             i <- liftIO $ isEmptyMVar interrupted
             when (not i) $ do
