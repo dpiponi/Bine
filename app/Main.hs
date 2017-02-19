@@ -6,9 +6,11 @@
 
 import GHC.Exts
 import Data.Array.IO
+import System.Directory
 import Data.Word
 import FileSystems
 import Data.Time.Clock
+import System.Environment
 import Monad6502
 import Text.Printf
 import State6502
@@ -41,14 +43,15 @@ import qualified Data.ByteString.Internal as BS (c2w, w2c)
 --import Atari
 
 data Args = Args { verbose :: Bool,
-                   file :: String,
+                   file :: Maybe String,
                    org :: String,
                    entry :: String,
-                   logfile :: Maybe String } deriving (Show, Data, Typeable)
+                   logfile :: Maybe String,
+                   directory :: Maybe String } deriving (Show, Data, Typeable)
 
 clargs :: Args
-clargs = Args { verbose = False, org = "0", entry = "0", file = "test.bin",
-                logfile = Nothing }
+clargs = Args { verbose = False, org = "0", entry = "C000", file = Nothing,
+                logfile = Nothing, directory = Nothing }
 
 times :: (Integral n, Monad m) => n -> m a -> m ()
 times 0 _ = return ()
@@ -88,13 +91,18 @@ handler interrupted = do
     print "SIGINT"
     putMVar interrupted 1
 
+-- b:../../roms/BASIC-1.0:8000,b:../../os.bin:c000
+
 {-
-loadfs :: IO FileSystem
---fs = Host
--- fs = Bytes 0xe00 0xe00 $ M.insert "FILE" (pack (Prelude.map BS.c2w "FRED")) M.empty
---loadfs = loadImage "WELCOME.IMG"
-loadfs = loadImage "PQUEST.IMG"
--}
+getROMSpec :: IO (Maybe (String, String))
+getROMSpec = do
+    case lookupEnv "BBC_LANGUAGE" of
+        Nothing -> return Nothing
+        Just languageRom -> case (lookupEnv "BBC_ROM") of
+            case lookupEnv "BBC_ROM" of
+            Nothing -> return Nothing
+            Just osRom -> return (languageRom, osRom)
+            -}
 
 main :: IO ()
 main = do
@@ -103,14 +111,22 @@ main = do
     --hSetEcho stdin False
     -- hSetEcho stdin False
     args <- cmdArgs clargs
-    print args
+    --print args
+    putStrLn "BBC Computer 32K\n"
 
     arr <- newArray (0, 0xffff) 0 :: IO (IOUArray Int Word8)
 
-    putStrLn $ "Running from " ++ file args
-    let Right specs = parse filespecs "" (file args)
-    forM_ specs $ \spec ->
-        loadFile arr spec
+    mSpecString <- case file args of
+                        Nothing -> lookupEnv "BBC_ROMS"
+                        Just specString' -> return $ Just specString'
+
+    case mSpecString of
+        Nothing -> return ()
+        Just specString -> do
+            let mSpecs = parse filespecs "" specString
+            case mSpecs of
+                Right specs -> forM_ specs $ \spec -> loadFile arr spec
+                Left _ -> putStrLn $ "Unable to parse ROM specification: " ++ show specString
 
     logHandle <- case logfile args of
         Nothing -> return Nothing
@@ -120,11 +136,14 @@ main = do
         
     let [(entryPoint, _)] = readHex (entry args)
     systime <- getCurrentTime
-    --fs <- loadfs
     let state = S { _mem = arr,  _clock = 0, _regs = R entryPoint 0 0 0 0 0xff,
                     _debug = verbose args, _handles = I.empty, _sysclock = systime,
                     _currentDirectory = '$', _keyQueue = emptyQueue,
                     _vduQueue = emptyVDUQueue, _logFile = logHandle }
+
+    case directory args of
+        Nothing -> return ()
+        Just d -> setCurrentDirectory d
     
     interrupted <- newEmptyMVar :: IO (MVar Int)
     installHandler sigINT (Catch $ handler interrupted) Nothing

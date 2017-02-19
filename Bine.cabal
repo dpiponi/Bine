@@ -41,6 +41,7 @@ executable bine-exe
   ghc-options:         -O5 -fwarn-missing-signatures -funbox-strict-fields -fsimpl-tick-factor=200
   build-depends:       base
                      , sdl2
+                     , directory
                      , bytestring
                      , unix
                      , vector
