@@ -9,6 +9,7 @@ import Data.Array.IO
 import System.Directory
 import Data.Word
 import FileSystems
+import System.Posix.Terminal
 import Data.Time.Clock
 import System.Environment
 import Monad6502
@@ -108,6 +109,9 @@ main :: IO ()
 main = do
     hSetBuffering stdin NoBuffering
     hSetBuffering stdout NoBuffering
+    a <- getTerminalAttributes 0
+    let a' = withCC a (System.Posix.Terminal.Interrupt, '\x1b')
+    setTerminalAttributes 0 a' Immediately
     --hSetEcho stdin False
     -- hSetEcho stdin False
     args <- cmdArgs clargs
