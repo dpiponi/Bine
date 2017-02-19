@@ -8,6 +8,7 @@ import Core
 import Data.Array
 import Data.ByteString.Internal as BS
 import Data.List
+import Data.Bits
 import Data.Int
 import TraceLog
 import Data.Word
@@ -17,6 +18,20 @@ import Text.Printf
 
 -- VDU codes: http://beebwiki.mdfs.net/VDU
 -- ANSI codes: https://en.wikipedia.org/wiki/ANSI_escape_code
+-- Block codes: http://www.riscos.com/support/developers/bbcbasic/part2/teletext.html
+braille :: String
+braille = "⠀⠁⠂⠃⠄⠅⠆⠇⠈⠉⠊⠋⠌⠍⠎⠏⠐⠑⠒⠓⠔⠕⠖⠗⠘⠙⠚⠛⠜⠝⠞⠟⠠⠡⠢⠣⠤⠥⠦⠧⠨⠩⠪⠫⠬⠭⠮⠯⠰⠱⠲⠳⠴⠵⠶⠷⠸⠹⠺⠻⠼⠽⠾⠿"
+
+flipBits :: (Bits a, Num a) => a -> a
+flipBits i = (if testBit i 1 then 1 else 0) .|.
+             (if testBit i 2 then 8 else 0) .|.
+             (if testBit i 4 then 2 else 0) .|.
+             (if testBit i 8 then 16 else 0) .|.
+             (if testBit i 16 then 4 else 0) .|.
+             (if testBit i 64 then 32 else 0)
+
+--reordered_braille :: String
+--reordered_braille = [braile !! flip i | i <- [0..63]]
 
 extra_bytes_list :: [Int]
 extra_bytes_list = [0, 1, 0, 0, 0, 0, 0, 0,
@@ -51,20 +66,40 @@ writeOrdinaryChar :: (MonadState State6502 m, Emu6502 m) => Word8 -> m ()
 writeOrdinaryChar c = 
     case c of
         127 -> liftIO $ putStr "\b \b"
+
         -- Red
         129 -> liftIO $ putStr " \x1b[31m"
         -- Green
         130 -> liftIO $ putStr " \x1b[32m"
+        -- Yellow
+        131 -> liftIO $ putStr " \x1b[33m"
         -- Blue
-        131 -> liftIO $ putStr " \x1b[32m"
-        132 -> liftIO $ putStr " \x1b[33m"
-        133 -> liftIO $ putStr " \x1b[34m"
-        134 -> liftIO $ putStr " \x1b[35m"
-        135 -> liftIO $ putStr " \x1b[36m"
-        -- Flash
-        --136 -> liftIO $ putStr " \x1b[5m"
-        --137 flash off
-        _ -> liftIO $ putChar (BS.w2c c)
+        132 -> liftIO $ putStr " \x1b[34m"
+        -- Magenta
+        133 -> liftIO $ putStr " \x1b[35m"
+        -- Cyan
+        134 -> liftIO $ putStr " \x1b[36m"
+        -- White
+        135 -> liftIO $ putStr " \x1b[37m"
+
+        -- Graphics Red
+        145 -> liftIO $ putStr " \x1b[31m"
+        -- Graphics Green
+        146 -> liftIO $ putStr " \x1b[32m"
+        -- Yellow
+        147 -> liftIO $ putStr " \x1b[33m"
+        -- Graphics Blue
+        148 -> liftIO $ putStr " \x1b[34m"
+        -- Graphics Magenta
+        149 -> liftIO $ putStr " \x1b[35m"
+        -- Graphics Cyan
+        150 -> liftIO $ putStr " \x1b[36m"
+        -- Graphics White
+        151 -> liftIO $ putStr " \x1b[37m"
+
+        _ -> if c >= 160 && c < 192 || c >= 224
+                then liftIO $ putChar (braille !! (fromIntegral $ flipBits (c-160)))
+                else liftIO $ putChar (BS.w2c c)
 
 writeSpecialChar :: (MonadState State6502 m, Emu6502 m) => Word8 -> m ()
 writeSpecialChar c = 

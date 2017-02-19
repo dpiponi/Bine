@@ -36,10 +36,13 @@ saveBlock blockAddr hostName = do
     let end = i16 endData32
     tracelog $ printf " Save %04x:%04x to '%s'" start end hostName
     h <- liftIO $ openBinaryFile hostName WriteMode
-    forM_ [start..end] $ \i -> do
+    forM_ [start..end-1] $ \i -> do
         x <- readMemory i
         liftIO $ hPutChar h (BS.w2c x)
     liftIO $ hClose h
+    loadAddress <- word32At (blockAddr+0x2)
+    execAddress <- word32At (blockAddr+0x6)
+    liftIO $ setMetaData hostName loadAddress execAddress
 
 loadFile :: (MonadState State6502 m, Emu6502 m) => Word16 -> String -> m ()
 loadFile blockAddr hostName = do

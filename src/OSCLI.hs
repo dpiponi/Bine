@@ -11,6 +11,7 @@ import Text.Printf
 import Core
 import KeyInput
 import Data.Char
+import System.Exit
 import MonadInput
 import Control.Lens hiding (noneOf)
 import State6502
@@ -28,9 +29,11 @@ import OSFILE
 
 data Command = FX Int Int Int
              | LOAD String Int -- <-- XXX needs to me Maybe Int
+             | SAVE String Int Bool Int Int Int
              | RUN String -- XXX pass args
              | KEY Int String
              | DIR Char
+             | EXIT Int
              | TAPE Int deriving Show
 
 decimal :: ParsecT String u Identity Int
@@ -70,22 +73,34 @@ ignoreCase (c : cs) = do
 
 -- XXX Ignore case of commands
 parseCommand :: ParsecT String u Identity Command
-parseCommand = (FX <$> do
-                            (ignoreCase "FX" >> spaces >> decimal)
-                            <*> option 0 (spaces >> char ',' >> spaces >> decimal)
-                            <*> option 0 (spaces >> char ',' >> spaces >> decimal))
+parseCommand = (FX <$> (ignoreCase "FX" >> spaces >> decimal)
+                   <*> option 0 (spaces >> char ',' >> spaces >> decimal)
+                   <*> option 0 (spaces >> char ',' >> spaces >> decimal))
                <|>
                (TAPE <$> (ignoreCase "TAPE" >> spaces >> option 0 decimal))
                <|>
-               (LOAD <$> (ignoreCase "Load" >> spaces >> filename) <*> option 0 (spaces >> number 16 hexDigit))
+               (LOAD <$> (ignoreCase "Load" >> spaces >> filename)
+                     <*> option 0 (spaces >> number 16 hexDigit))
                <|>
                (RUN <$> (ignoreCase "Run" >> spaces >> (filename <* spaces)))
                <|>
-               (KEY <$> (ignoreCase "KEY" >> spaces >> decimal) <*> many anyChar)
+               (KEY <$> (ignoreCase "KEY" >> spaces >> decimal)
+                    <*> many anyChar)
                <|>
                (DIR <$> (ignoreCase "DIR" >> spaces >> anyChar))
+               <|>
+               (SAVE <$> (ignoreCase "Save" >> spaces >> (filename <* spaces))
+                     <*> (number 16 hexDigit <* spaces)
+                     <*> option False (char '+' >> spaces >> return True)
+                     <*> (number 16 hexDigit <* spaces)
+                     <*> option 0 (number 16 hexDigit <* spaces)
+                     <*> option 0 (number 16 hexDigit <* spaces))
+                <|>
+                (ignoreCase "EXit" >> spaces >> ((EXIT <$> option 0 decimal) <* spaces))
 
 execStarCommand :: (Emu6502 m, MonadState State6502 m) => Command -> m ()
+execStarCommand (EXIT 0) = liftIO $ exitSuccess
+execStarCommand (EXIT n) = liftIO $ exitWith (ExitFailure n)
 execStarCommand (FX a x y) = do
     osbyte (i8 a) (i8 x) (i8 y)
     p0 <- getPC
@@ -116,6 +131,27 @@ execStarCommand (LOAD filename loadAddress) = do
             -- Use user specified address
             writeWord32 (0x2ee+6) (fromIntegral 0)
             writeWord32 (0x2ee+2) (fromIntegral loadAddress)
+    osfile
+    p0 <- getPC
+    putPC $ p0+2
+execStarCommand (SAVE filename startAddress relative endAddress execAddress reloadAddress) = do
+    --liftIO $ printf "*SAVE %s %08x %d %08x %08x" filename startAddress (if relative then 1 else 0::Int) endAddress execAddress
+    putA 0
+    -- Control block at &02EE
+    putX 0xee
+    putY 0x02
+    let addrFilename = 0x200 :: Word16
+    -- Write filename
+    forM_ (zip [addrFilename..] filename) $
+            \(i, d) -> writeMemory (fromIntegral i) (BS.c2w d)
+    -- Terminate filename with zero
+    writeMemory (fromIntegral addrFilename+fromIntegral (length filename)) 0
+    -- Write address of filename
+    writeWord16 0x2ee addrFilename
+    writeWord32 (0x2ee+2) (fromIntegral $ if reloadAddress == 0 then startAddress else reloadAddress)
+    writeWord32 (0x2ee+6) (fromIntegral execAddress)
+    writeWord32 (0x2ee+0xa) (fromIntegral startAddress)
+    writeWord32 (0x2ee+0xe) (fromIntegral $ if relative then startAddress+endAddress else endAddress)
     osfile
     p0 <- getPC
     putPC $ p0+2
