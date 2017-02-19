@@ -55,11 +55,12 @@ parseCatalogue = M.fromList <$> many parseMetaData
 
 readMetaCatalogue :: String -> IO MetaCatalogue
 readMetaCatalogue name = do
-    h' <- tryIOError $ openFile name ReadMode
+    h' <- tryIOError $ openBinaryFile name ReadMode
     case h' of
-        Left _ -> return M.empty
+        Left e -> do
+            putStrLn $ "Failed parse: " ++ show e
+            return M.empty
         Right h -> do
-            liftIO $ putStrLn $ "hGetContents " ++ name
             d' <- B.hGetContents h
             let d = map BS.w2c $ B.unpack d'
             let mc = parse parseCatalogue "" d
@@ -68,7 +69,7 @@ readMetaCatalogue name = do
 
 writeMetaCatalogue :: String -> MetaCatalogue -> IO ()
 writeMetaCatalogue name ms = do
-    h <- openFile name WriteMode
+    h <- openBinaryFile name WriteMode
     forM_ (M.toList ms) $ \(filename, MetaData load exec) -> do
         hPrintf h "%c.% -7s %08x %08x\n"
                   (head filename) (tail filename) load exec
@@ -80,7 +81,11 @@ compactName (c : '.' : cs) = c : cs
 setMetaData :: String -> Word32 -> Word32 -> IO ()
 setMetaData filename load exec = do
     mv <- readMetaCatalogue ".BBC_Store"
+    print $ "Store was ="
+    print mv
     let mv' = M.insert (compactName filename) (MetaData load exec) mv
+    print $ "Store now ="
+    print mv'
     writeMetaCatalogue ".BBC_Store" mv'
 
 getMetaData :: String -> IO (Word32, Word32)

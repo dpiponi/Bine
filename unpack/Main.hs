@@ -56,7 +56,7 @@ getVolumeName image = getPadded image 8 0x0 ++ getPadded image 4 0x100
 
 -- Deal with Lk. XXX
 getFileName :: B.ByteString -> Int -> String
-getFileName image i = (BS.w2c $ image `B.index` (8*i+15)) : getPadded image 7 (8*i+8)
+getFileName image i = (BS.w2c $ (image `B.index` (8*i+15)) .&. 0x7f) : getPadded image 7 (8*i+8)
 
 i16' :: Integral a => a -> Word16
 i16' = fromIntegral

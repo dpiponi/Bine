@@ -71,13 +71,13 @@ ignoreCase (c : cs) = do
 -- XXX Ignore case of commands
 parseCommand :: ParsecT String u Identity Command
 parseCommand = (FX <$> do
-                            (ignoreCase "fx" >> spaces >> decimal)
+                            (ignoreCase "FX" >> spaces >> decimal)
                             <*> option 0 (spaces >> char ',' >> spaces >> decimal)
                             <*> option 0 (spaces >> char ',' >> spaces >> decimal))
                <|>
                (TAPE <$> (ignoreCase "TAPE" >> spaces >> option 0 decimal))
                <|>
-               (LOAD <$> (ignoreCase "LOad" >> spaces >> filename) <*> option 0 (spaces >> number 16 hexDigit))
+               (LOAD <$> (ignoreCase "Load" >> spaces >> filename) <*> option 0 (spaces >> number 16 hexDigit))
                <|>
                (RUN <$> (ignoreCase "Run" >> spaces >> (filename <* spaces)))
                <|>
@@ -156,9 +156,11 @@ oscli = do
     cmd <- stringAt addr
     tracelog $ printf "OSCLI: %s" cmd
     let cmd' = removeStars cmd
-    liftIO $ putStrLn cmd'
     let cmd'' = parse parseCommand "" cmd'
     case cmd'' of
         Right cmd''' -> execStarCommand cmd'''
-        Left _ -> void $ liftIO $ system cmd'
+        Left _ -> do
+            void $ liftIO $ system cmd'
+            p0 <- getPC
+            putPC $ p0+2
     return ()

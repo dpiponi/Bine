@@ -15,6 +15,9 @@ import Monad6502
 import State6502
 import Text.Printf
 
+-- VDU codes: http://beebwiki.mdfs.net/VDU
+-- ANSI codes: https://en.wikipedia.org/wiki/ANSI_escape_code
+
 extra_bytes_list :: [Int]
 extra_bytes_list = [0, 1, 0, 0, 0, 0, 0, 0,
                     0, 0, 0, 0, 0, 0, 0, 0,
@@ -29,13 +32,19 @@ emptyVDUQueue = VDUOutput [] 0
 
 complexVDU :: (MonadState State6502 m, Emu6502 m) => [Word8] -> m ()
 complexVDU [18, a, b] = tracelog $ printf " (Define graphics colour %d, %d)" a b
-complexVDU [22, m] = tracelog $ printf " (MODE %d)" m
+complexVDU [22, m] = do
+    liftIO $ putStrLn "\x1b[2J\x1b[;H"
+    tracelog $ printf " (MODE %d)" m
+complexVDU (23 : c : cs) = tracelog $ printf " (Redefine character %d: %s)" c (show cs)
 complexVDU [25, k, xlo, xhi, ylo, yhi] =
     tracelog $ printf " (PLOT %d, %d, %d)"
                       k (fromIntegral (make16 xlo xhi) :: Int16)
                         (fromIntegral (make16 ylo yhi) :: Int16)
 complexVDU [28, a, b, c, d] =
     tracelog $ printf " (Define text window %d %d %d %d)" a b c d
+complexVDU [31, x, y] = do
+    tracelog $ printf " Move cursor to %d, %d" x y
+    liftIO $ printf "\x1b[%d;%dH" (y+1) (x+1)
 complexVDU cs = liftIO $ putStr $ show cs
 
 writeOrdinaryChar :: (MonadState State6502 m, Emu6502 m) => Word8 -> m ()
@@ -60,6 +69,7 @@ writeOrdinaryChar c =
 writeSpecialChar :: (MonadState State6502 m, Emu6502 m) => Word8 -> m ()
 writeSpecialChar c = 
     case c of
+        0 -> return ()
         10 -> liftIO $ putStrLn "\x1b[0m"
         12 -> liftIO $ putStrLn "\x1b[2J\x1b[;H"
         13 -> liftIO $ putStrLn "\x1b[0m"
@@ -67,7 +77,8 @@ writeSpecialChar c =
         15 -> tracelog " (Paged mode off)"
         16 -> tracelog " (Clear graphics area)"
         20 -> tracelog " (Restore default logical colours)"
-        _ -> liftIO $ putStr $ "<" ++ show c ++ ">"
+        30 -> liftIO $ putStr "\x1b[;H"
+        _ -> tracelog $ printf " (VDU %d)" c
 
 writeChar :: (MonadState State6502 m, Emu6502 m) => Word8 -> VDUOutput -> m VDUOutput
 writeChar c (VDUOutput b n) | n > 1 = return $ VDUOutput (b ++ [c]) (n-1)
