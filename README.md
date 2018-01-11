@@ -1,8 +1,10 @@
 Bine
-----
+====
 Run BBC Micro ROMs on a modern computer.
 
-Work in progress.
+Status
+------
+This isn't intended to be a complete project. It's just a playground for me to learn a bit about the BBC Micro internals. But you can run many BASIC programs with it as long as you don't expect correct graphics or sound.
 
 The purpose of Bine is to run BBC Micro ROMs without emulating BBC Micro hardware. The BBC Micro operating system had a well-defined API so instead of mapping OS calls to emulated BBC hardware they are mapped to OS calls on the host operating system. This means you have a BBC Micro with access to your native file system. For example you can run authentic BBC Basic in a modern environment.
 
